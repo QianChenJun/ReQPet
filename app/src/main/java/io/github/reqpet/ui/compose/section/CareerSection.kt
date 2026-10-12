@@ -163,6 +163,9 @@ fun CareerSection(state: SettingsState) {
 @Composable
 private fun StudyPanel(state: SettingsState, details: QQPetDirectBridge.SecondMapDetails?) {
     val stageItems = UiDescUtils.buildSchoolStageOptions(details)
+    val rushEnabled = state.bool(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, false)
+    val rushDisabled = listOf(false, !rushEnabled, !rushEnabled, !rushEnabled)
+    val durationDisabled = listOf(!rushEnabled, !rushEnabled, !rushEnabled)
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
             OptionLabel("学园阶段")
@@ -175,18 +178,20 @@ private fun StudyPanel(state: SettingsState, details: QQPetDirectBridge.SecondMa
             )
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-            OptionLabel("专攻科目")
+            OptionLabel(if (rushEnabled) "专攻科目（速成已接管，仅轮换有效）" else "专攻科目")
             SegmentedChoiceRow(
                 options = listOf("轮换", "智力", "力量", "魅力"),
+                enabled = rushDisabled,
                 selectedIndex = state.int(PreferencesHelper.KEY_COURSE_SUBJECT, 0),
                 onSelect = { state.setInt(PreferencesHelper.KEY_COURSE_SUBJECT, it) },
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-            OptionLabel("课时时长偏好")
+            OptionLabel(if (rushEnabled) "课时时长偏好（速成已接管）" else "课时时长偏好")
             SegmentedChoiceRow(
                 options = listOf("任意课时", "基础短课", "进阶长课"),
+                enabled = durationDisabled,
                 selectedIndex = state.int(PreferencesHelper.KEY_COURSE_DURATION, 0),
                 onSelect = { state.setInt(PreferencesHelper.KEY_COURSE_DURATION, it) },
                 modifier = Modifier.padding(vertical = 4.dp)
@@ -195,11 +200,11 @@ private fun StudyPanel(state: SettingsState, details: QQPetDirectBridge.SecondMa
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
             ToggleRow(
                 title = "隐藏职业速成",
-                checked = state.bool(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, false),
+                checked = rushEnabled,
                 onCheckedChange = { state.setBool(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, it) },
                 subtitle = "开启后学园自动专攻速成主属性（默认智能轮换：按属性倍率挑离解锁最近的属性，解锁后自动换下一个），强制短课高频触发，疲劳照常上课"
             )
-            if (state.bool(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, false)) {
+            if (rushEnabled) {
                 OptionLabel("速成主属性")
                 SegmentedChoiceRow(
                     options = listOf("智能轮换", "智力", "力量", "魅力"),
