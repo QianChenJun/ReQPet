@@ -51,7 +51,7 @@ object PetCycleDispatcher {
         for (i in 0 until attempts) {
             val target = available[PetAdventureEngine.roundRobinCursor % available.size]
             PetAdventureEngine.roundRobinCursor = (PetAdventureEngine.roundRobinCursor + 1) % available.size
-            if (executeAction(context, bridge, petId, target)) {
+            if (executeAction(context, bridge, petId, target, announce = false)) {
                 dispatched = true
                 break
             }
@@ -93,11 +93,12 @@ object PetCycleDispatcher {
         context: Context,
         bridge: QQPetDirectBridge,
         petId: String,
-        action: String
+        action: String,
+        announce: Boolean = false
     ): Boolean {
-        if (dispatchCareerAction(context, bridge, petId, action)) return true
-        if (dispatchCareAction(context, bridge, petId, action)) return true
-        if (dispatchSocialAction(context, bridge, petId, action)) return true
+        if (dispatchCareerAction(context, bridge, petId, action, announce)) return true
+        if (dispatchCareAction(context, bridge, petId, action, announce)) return true
+        if (dispatchSocialAction(context, bridge, petId, action, announce)) return true
         return false
     }
 
@@ -105,24 +106,25 @@ object PetCycleDispatcher {
         context: Context,
         bridge: QQPetDirectBridge,
         petId: String,
-        action: String
+        action: String,
+        announce: Boolean
     ): Boolean {
         return when (action) {
             "study", "school" -> {
                 val ok = dispatchStudy(context, bridge, petId)
-                showToast(context, if (ok) "已成功安排学园课程修习" else "课程开课未生效，详情见日志")
+                announceToast(context, announce, if (ok) "已成功安排学园课程修习" else "课程开课未生效，详情见日志")
                 ok
             }
 
             "work" -> {
                 val ok = dispatchWork(context, bridge, petId)
-                showToast(context, if (ok) "已成功安排兼职打工派遣" else "打工开工未生效，详情见日志")
+                announceToast(context, announce, if (ok) "已成功安排兼职打工派遣" else "打工开工未生效，详情见日志")
                 ok
             }
 
             "adventure" -> {
                 val ok = PetAdventureDispatch.dispatchAdventure(context, bridge, petId)
-                showToast(context, if (ok) "已成功启程森林探险巡航" else "探险启程未生效，详情见日志")
+                announceToast(context, announce, if (ok) "已成功启程森林探险巡航" else "探险启程未生效，详情见日志")
                 ok
             }
 
@@ -144,8 +146,8 @@ object PetCycleDispatcher {
                             ) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
                         }
                     }
-                    showToast(context, if (code == 0) "已发起探险收益结算" else "任务已在手Q结清或已失效，已同步状态")
-                } ?: showToast(context, "当前暂无待结算任务")
+                    announceToast(context, announce, if (code == 0) "已发起探险收益结算" else "任务已在手Q结清或已失效，已同步状态")
+                } ?: announceToast(context, announce, "当前暂无待结算任务")
                 settled
             }
 
@@ -157,8 +159,8 @@ object PetCycleDispatcher {
                     if (recalled) {
                         PetAdventureEngine.markStoryRecalled(sId)
                     }
-                    showToast(context, "已发起宠物返程召回")
-                } ?: showToast(context, "小宠当前未在外出派遣状态")
+                    announceToast(context, announce, "已发起宠物返程召回")
+                } ?: announceToast(context, announce, "小宠当前未在外出派遣状态")
                 recalled
             }
 
@@ -170,7 +172,8 @@ object PetCycleDispatcher {
         context: Context,
         bridge: QQPetDirectBridge,
         petId: String,
-        action: String
+        action: String,
+        announce: Boolean
     ): Boolean {
         return when (action) {
             "care" -> {
@@ -186,7 +189,7 @@ object PetCycleDispatcher {
                     petId,
                     PetAdventureEngine.prefCareCleanThreshold
                 ) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
-                showToast(context, "已触发小宠进食与洗澡巡检")
+                announceToast(context, announce, "已触发小宠进食与洗澡巡检")
                 true
             }
 
@@ -197,7 +200,7 @@ object PetCycleDispatcher {
                     petId,
                     PetAdventureEngine.prefCareEnergyThreshold
                 ) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
-                showToast(context, "已触发小宠进食补充体力")
+                announceToast(context, announce, "已触发小宠进食补充体力")
                 true
             }
 
@@ -208,7 +211,7 @@ object PetCycleDispatcher {
                     petId,
                     PetAdventureEngine.prefCareCleanThreshold
                 ) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
-                showToast(context, "已触发小宠沐浴恢复清洁")
+                announceToast(context, announce, "已触发小宠沐浴恢复清洁")
                 true
             }
 
@@ -233,7 +236,7 @@ object PetCycleDispatcher {
                 } else {
                     "暂未发现可照料的养宠好友"
                 }
-                showToast(context, msg)
+                announceToast(context, announce, msg)
                 true
             }
 
@@ -245,7 +248,8 @@ object PetCycleDispatcher {
         context: Context,
         bridge: QQPetDirectBridge,
         petId: String,
-        action: String
+        action: String,
+        announce: Boolean
     ): Boolean {
         return when (action) {
             "like_back" -> {
@@ -260,7 +264,7 @@ object PetCycleDispatcher {
                 val count =
                     PetSocialTask.executeAutoLikeBack(params) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
                 val msg = if (count > 0) "成功回赠 $count 位来访小伙伴" else "暂无可回踩的来访记录，详情见日志"
-                showToast(context, msg)
+                announceToast(context, announce, msg)
                 true
             }
 
@@ -276,7 +280,7 @@ object PetCycleDispatcher {
                     dailyLimit = PetAdventureEngine.prefActiveVisitDailyLimit,
                     isManual = true
                 ) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
-                showToast(context, "已触发主动串门送心")
+                announceToast(context, announce, "已触发主动串门送心")
                 true
             }
 
@@ -288,7 +292,7 @@ object PetCycleDispatcher {
                     PetAdventureEngine.currentActiveUin,
                     true
                 ) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
-                showToast(context, if (count > 0) "成功拆开 $count 个金币福袋！" else "当前暂无可领取的金币福袋")
+                announceToast(context, announce, if (count > 0) "成功拆开 $count 个金币福袋！" else "当前暂无可领取的金币福袋")
                 true
             }
 
@@ -311,7 +315,7 @@ object PetCycleDispatcher {
                     myTotal,
                     0L
                 ) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
-                showToast(context, "自动 PK 挑战已执行 (今日第 $count 场)")
+                announceToast(context, announce, "自动 PK 挑战已执行 (今日第 $count 场)")
                 true
             }
 
@@ -319,7 +323,8 @@ object PetCycleDispatcher {
         }
     }
 
-    private suspend fun showToast(context: Context, text: String) {
+    private suspend fun announceToast(context: Context, announce: Boolean, text: String) {
+        if (!announce) return
         val appContext = context.applicationContext ?: context
         withContext(Dispatchers.Main) {
             try {
