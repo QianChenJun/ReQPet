@@ -300,6 +300,21 @@ class HookEntry : XposedModule() {
                         TAG,
                         "冒险探索发包内核就绪 (来源: $from, 类: ${QQPetDirectBridge.resolvedDelegateClass?.name})"
                     )
+                    try {
+                        val snifferPrefs = appContext.getSharedPreferences("qqpet_inproc_prefs", Context.MODE_PRIVATE)
+                        io.github.reqpet.hook.OidbSniffer.isEnabled =
+                            snifferPrefs.getBoolean(PreferencesHelper.KEY_DEBUG_LOG, false)
+                        io.github.reqpet.protocol.channel.OidbChannel.resolvedDelegateClass?.let { cls ->
+                            val sendMethod = cls.methods + cls.declaredMethods
+                            io.github.reqpet.hook.OidbSniffer.install(
+                                classLoader, cls,
+                                sendMethod.first { it.parameterTypes.size == 5 && it.parameterTypes[0] == ByteArray::class.java }
+                            )
+                        }
+                    } catch (t: Throwable) {
+                        if (t is kotlinx.coroutines.CancellationException) throw t
+                        HookLog.e(TAG, "OIDB 嗅探初始化失败", t)
+                    }
                 } else if (globalEngine == null) {
                     globalBridge = bridge
                     globalEngine = PetAdventureEngine(bridge).apply {
