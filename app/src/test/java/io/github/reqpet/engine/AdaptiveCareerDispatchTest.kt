@@ -46,4 +46,14 @@ class AdaptiveCareerDispatchTest {
         )
         assertFalse("普通错误不应被误判为出行中", PetPureCalculations.isPetAlreadyOutError(1001, "网络繁忙"))
     }
+
+    @Test
+    fun testHiddenCareerRushParamDefaultsOff() {
+        val param = StudyDispatchParam()
+        assertFalse("速成默认必须关闭", param.hiddenCareerRush)
+        assertEquals("速成主属性默认为 0（未选择）", 0, param.hiddenCareerTarget)
+        val enabled = StudyDispatchParam(hiddenCareerRush = true, hiddenCareerTarget = 2)
+        assertTrue(enabled.hiddenCareerRush)
+        assertEquals(2, enabled.hiddenCareerTarget)
+    }
 }
