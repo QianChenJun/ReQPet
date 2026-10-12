@@ -70,13 +70,17 @@ class FaultInjectionAndConsistencyTest {
     }
 
     @Test
-    fun idleSettlementRequiresKnownDeadlineAndMatchingStoryIdentity() {
+    fun idleSettlementTracksStoryEvenAfterRestartClearsDeadline() {
+        // 重启后 currentTaskEndTimeMillis==0 而 lastActiveStoryId 残留：旧逻辑在此死锁
+        // （服务器持续 idle，永不结算也永不派遣新任务）。新逻辑必须仍发起结算。
         PetAdventureEngine.lastActiveStoryId = "6400-story"
         val idle = StoryStatusResult(0, null, null, "6400-story", status = 0L)
-        assertNull(PetStoryHandlers.resolveSettlementStoryId(idle, now = 100_000L))
-        PetAdventureEngine.currentTaskEndTimeMillis = 90_000L
-        assertNull(PetStoryHandlers.resolveSettlementStoryId(idle.copy(storyId = "different-story"), now = 100_000L))
+        assertEquals("6400-story", PetStoryHandlers.resolveSettlementStoryId(idle, now = 100_000L))
+        // idle 回包的 storyId 是服务器最近一次 story，与本地追踪不同不代表已结清。
+        assertEquals("6400-story", PetStoryHandlers.resolveSettlementStoryId(idle.copy(storyId = "different-story"), now = 100_000L))
         assertEquals("6400-story", PetStoryHandlers.resolveSettlementStoryId(idle.copy(storyId = null), now = 100_000L))
+        PetAdventureEngine.clearSettledStory("6400-story")
+        assertNull(PetStoryHandlers.resolveSettlementStoryId(idle, now = 100_002L))
     }
 
     @Test

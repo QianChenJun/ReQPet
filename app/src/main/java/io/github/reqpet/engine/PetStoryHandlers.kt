@@ -109,10 +109,13 @@ internal object PetStoryHandlers {
         return when {
             story.isReadyToSettle -> story.storyId
             story.isIdle -> PetAdventureEngine.pendingSettlementStoryId
-                ?: PetAdventureEngine.lastActiveStoryId?.takeIf {
-                    // Expiry may clear running fields while the known story still needs settlement.
-                    PetAdventureEngine.currentTaskEndTimeMillis > 0L &&
-                            (story.storyId.isNullOrBlank() || story.storyId == it)
+                ?: PetAdventureEngine.lastActiveStoryId?.also {
+                    // A tracked story means we dispatched it and never confirmed settlement,
+                    // including after process restart (currentTaskEndTimeMillis==0). Attempt
+                    // settlement every idle cycle: success clears it, a non-135004 failure
+                    // also clears the tracking, so this can never dead-wait. The idle
+                    // response's storyId is the server's latest story, not necessarily the
+                    // tracked one; a mismatch does not mean the tracked story is settled.
                 }
 
             else -> null

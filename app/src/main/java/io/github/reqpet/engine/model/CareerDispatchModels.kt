@@ -10,8 +10,6 @@ data class StudyDispatchParam(
     val customSchoolStage: Int = 0,
     val customCourseSubject: Int = 0,
     val customCourseDuration: Int = 0,
-    val hiddenCareerRush: Boolean = false,
-    val hiddenCareerTarget: Int = 0,
     val enableFatigueToAdventure: Boolean = true,
     val studyAttributeCursor: Int = 0,
     val learnedStudySubEvent: Long? = null,
