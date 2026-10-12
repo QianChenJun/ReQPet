@@ -93,6 +93,19 @@ fun DiagnosticsSection(state: SettingsState) {
 
 
         Spacer(modifier = Modifier.height(16.dp))
+        SectionHeader("操作提示")
+        SettingsGroup {
+            item {
+                ToggleRow(
+                    title = "操作结果弹窗",
+                    checked = state.bool(PreferencesHelper.KEY_ACTION_TOAST, true),
+                    onCheckedChange = { state.setBool(PreferencesHelper.KEY_ACTION_TOAST, it) },
+                    subtitle = "手动操作与后台自动调度时弹出结果提示；关闭后仅记录到模块日志"
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
         SectionHeader("调试选项")
         SettingsGroup {
             item {

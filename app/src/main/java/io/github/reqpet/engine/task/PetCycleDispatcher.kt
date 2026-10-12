@@ -324,7 +324,7 @@ object PetCycleDispatcher {
     }
 
     private suspend fun announceToast(context: Context, announce: Boolean, text: String) {
-        if (!announce) return
+        if (!announce || !PetAdventureEngine.prefActionToast) return
         val appContext = context.applicationContext ?: context
         withContext(Dispatchers.Main) {
             try {

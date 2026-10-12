@@ -43,4 +43,5 @@ object PreferencesHelper {
     const val KEY_ACTIVE_VISIT_DAILY_LIMIT = "key_active_visit_daily_limit"
     const val KEY_STRANGER_UIN_POOL = "key_stranger_uin_pool"
     const val KEY_DISABLE_TINKER_PATCH = "key_disable_tinker_patch"
+    const val KEY_ACTION_TOAST = "key_action_toast"
 }
