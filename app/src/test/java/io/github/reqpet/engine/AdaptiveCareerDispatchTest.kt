@@ -51,7 +51,7 @@ class AdaptiveCareerDispatchTest {
     fun testHiddenCareerRushParamDefaultsOff() {
         val param = StudyDispatchParam()
         assertFalse("速成默认必须关闭", param.hiddenCareerRush)
-        assertEquals("速成主属性默认为 0（未选择）", 0, param.hiddenCareerTarget)
+        assertEquals("速成主属性默认为 0（智能轮换）", 0, param.hiddenCareerTarget)
         val enabled = StudyDispatchParam(hiddenCareerRush = true, hiddenCareerTarget = 2)
         assertTrue(enabled.hiddenCareerRush)
         assertEquals(2, enabled.hiddenCareerTarget)

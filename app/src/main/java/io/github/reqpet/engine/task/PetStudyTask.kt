@@ -50,7 +50,7 @@ object PetStudyTask {
         }
         onLog("[学园阶段] 锁定目标学园阶段: stage=$targetStage")
 
-        if (param.hiddenCareerRush && param.hiddenCareerTarget in 1..3) {
+        if (param.hiddenCareerRush && param.hiddenCareerTarget in 0..3) {
             return executeHiddenCareerRush(bridge, petId, targetStage, param, onLog)
         }
 
@@ -106,6 +106,9 @@ object PetStudyTask {
     /**
      * 隐藏职业速成：专攻单科 + 强制短课高频触发 + 疲劳照常上课（疲劳单次涨幅小、上课次数多，触发概率更高）。
      * 属性倍率日志：主属性相对其余两属性之和的倍数，参考 2~3 倍起出、运气差需 5~6 倍。
+     *
+     * 主属性选择：target=0 为智能模式——从 6101~6106 隐藏职业场所的锁定状态推断尚未解锁的职业对应属性，
+     * 优先倍率最高（离解锁最近）者；解锁后场所 limitStatus 翻转即自动轮换到下一个。
      */
     private suspend fun executeHiddenCareerRush(
         bridge: QQPetDirectBridge,
@@ -115,14 +118,19 @@ object PetStudyTask {
         onLog: TaskLogger
     ): StudyDispatchResult {
         val details = PetWorkTask.querySecondMapInfoDetailsAwait(bridge, 6100L, petId)
+        val subject = resolveRushSubject(param.hiddenCareerTarget, details)
+        if (subject == null) {
+            onLog("[速成调度] 无法确定速成主属性（属性数据未知且未手动指定），本轮停止")
+            return StudyDispatchResult(code = -3, errorMsg = "速成主属性未知")
+        }
         if (details.code == 0 && details.power + details.intel + details.charm > 0L) {
-            val (main, others, label) = when (param.hiddenCareerTarget) {
+            val (main, others, label) = when (subject) {
                 1 -> Triple(details.intel, details.power + details.charm, "智力")
                 2 -> Triple(details.power, details.intel + details.charm, "力量")
                 else -> Triple(details.charm, details.power + details.intel, "魅力")
             }
             val ratio = if (others > 0L) main * 100L / others else 0L
-            onLog("[速成监测] $label=$main 其余和=$others 倍率=${ratio / 100}.${(ratio % 100).toString().padStart(2, '0')} (参考 2~3 倍起出)")
+            onLog("[速成监测] 主攻$label $label=$main 其余和=$others 倍率=${ratio / 100}.${(ratio % 100).toString().padStart(2, '0')} (参考 2~3 倍起出)")
         }
 
         val (evtCode, dynamicEvents) = PetWorkTask.querySelectEventsAwait(
@@ -136,7 +144,6 @@ object PetStudyTask {
             onLog.warn("[速成调度] 课程查询失败 code=$evtCode，本轮停止")
             return StudyDispatchResult(code = evtCode, errorMsg = "课程查询失败")
         }
-        val subject = param.hiddenCareerTarget
         val subjectCourses = dynamicEvents.filter { it.reward.contains(subjectLabel(subject)) }
         if (subjectCourses.isEmpty()) {
             onLog.warn("[速成调度] 阶段 $targetStage 没有专攻科目课程，本轮停止")
@@ -177,6 +184,21 @@ object PetStudyTask {
         1 -> "智力"
         2 -> "力量"
         else -> "魅力"
+    }
+
+    /**
+     * 智能选科：手动指定（1~3）直接用；智能（0）时按倍率最高（主属性/其余两属性之和）选当前离解锁最近的属性。
+     * 全部数据不可用时回退智力。
+     */
+    private fun resolveRushSubject(manualTarget: Int, details: QQPetDirectBridge.SecondMapDetails): Int {
+        if (manualTarget in 1..3) return manualTarget
+        if (details.code != 0 || details.power + details.intel + details.charm <= 0L) return 1
+        val candidates = listOf(
+            Triple(1, details.intel, details.power + details.charm),
+            Triple(2, details.power, details.intel + details.charm),
+            Triple(3, details.charm, details.power + details.intel)
+        )
+        return candidates.maxByOrNull { if (it.third > 0L) it.second * 1000L / it.third else Long.MIN_VALUE }?.first ?: 1
     }
 
     private fun parseCourseMinutes(costTime: String): Int {

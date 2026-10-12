@@ -197,14 +197,14 @@ private fun StudyPanel(state: SettingsState, details: QQPetDirectBridge.SecondMa
                 title = "隐藏职业速成",
                 checked = state.bool(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, false),
                 onCheckedChange = { state.setBool(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, it) },
-                subtitle = "专攻单科短课高频触发，疲劳照常上课；每次上课记录属性倍率日志（2~3 倍起出）"
+                subtitle = "开启后学园自动专攻速成主属性（默认智能轮换：按属性倍率挑离解锁最近的属性，解锁后自动换下一个），强制短课高频触发，疲劳照常上课"
             )
             if (state.bool(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, false)) {
                 OptionLabel("速成主属性")
                 SegmentedChoiceRow(
-                    options = listOf("智力", "力量", "魅力"),
-                    selectedIndex = (state.int(PreferencesHelper.KEY_HIDDEN_CAREER_TARGET, 0) - 1).coerceIn(0, 2),
-                    onSelect = { state.setInt(PreferencesHelper.KEY_HIDDEN_CAREER_TARGET, it + 1) },
+                    options = listOf("智能轮换", "智力", "力量", "魅力"),
+                    selectedIndex = state.int(PreferencesHelper.KEY_HIDDEN_CAREER_TARGET, 0),
+                    onSelect = { state.setInt(PreferencesHelper.KEY_HIDDEN_CAREER_TARGET, it) },
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
