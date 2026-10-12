@@ -345,6 +345,8 @@ object PetCycleDispatcher {
             customSchoolStage = PetAdventureEngine.prefCustomSchoolStage,
             customCourseSubject = PetAdventureEngine.prefCustomCourseSubject,
             customCourseDuration = PetAdventureEngine.prefCustomCourseDuration,
+            hiddenCareerRush = PetAdventureEngine.prefHiddenCareerRush,
+            hiddenCareerTarget = PetAdventureEngine.prefHiddenCareerTarget,
             enableFatigueToAdventure = PetAdventureEngine.enableFatigueToAdventure,
             studyAttributeCursor = PetAdventureEngine.studyAttributeCursor,
             learnedStudySubEvent = PetAdventureEngine.learnedStudySubEvent,

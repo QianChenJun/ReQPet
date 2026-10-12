@@ -192,6 +192,23 @@ private fun StudyPanel(state: SettingsState, details: QQPetDirectBridge.SecondMa
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+            ToggleRow(
+                title = "隐藏职业速成",
+                checked = state.bool(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, false),
+                onCheckedChange = { state.setBool(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, it) },
+                subtitle = "专攻单科短课高频触发，疲劳照常上课；每次上课记录属性倍率日志（2~3 倍起出）"
+            )
+            if (state.bool(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, false)) {
+                OptionLabel("速成主属性")
+                SegmentedChoiceRow(
+                    options = listOf("智力", "力量", "魅力"),
+                    selectedIndex = (state.int(PreferencesHelper.KEY_HIDDEN_CAREER_TARGET, 0) - 1).coerceIn(0, 2),
+                    onSelect = { state.setInt(PreferencesHelper.KEY_HIDDEN_CAREER_TARGET, it + 1) },
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+        }
     }
 }
 

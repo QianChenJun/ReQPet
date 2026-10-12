@@ -41,6 +41,8 @@ internal object EngineConfigLoader {
             PetAdventureEngine.prefCustomSchoolStage = p.getInt(PreferencesHelper.KEY_SCHOOL_STAGE, 0)
             PetAdventureEngine.prefCustomCourseSubject = p.getInt(PreferencesHelper.KEY_COURSE_SUBJECT, 0)
             PetAdventureEngine.prefCustomCourseDuration = p.getInt(PreferencesHelper.KEY_COURSE_DURATION, 0)
+            PetAdventureEngine.prefHiddenCareerRush = p.getBoolean(PreferencesHelper.KEY_HIDDEN_CAREER_RUSH, false)
+            PetAdventureEngine.prefHiddenCareerTarget = p.getInt(PreferencesHelper.KEY_HIDDEN_CAREER_TARGET, 0)
             PetAdventureEngine.prefCustomWorkType = p.getInt(PreferencesHelper.KEY_WORK_TYPE, 0)
             PetAdventureEngine.prefCustomWorkDuration = p.getInt(PreferencesHelper.KEY_WORK_DURATION, 0)
             PetAdventureEngine.prefCareEnergyThreshold = p.getInt(PreferencesHelper.KEY_CARE_ENERGY_THRESHOLD, 60)
@@ -98,6 +100,8 @@ internal object EngineConfigLoader {
         val prefCustomSchoolStage = PetAdventureEngine.prefCustomSchoolStage
         val prefCustomCourseSubject = PetAdventureEngine.prefCustomCourseSubject
         val prefCustomCourseDuration = PetAdventureEngine.prefCustomCourseDuration
+        val prefHiddenCareerRush = PetAdventureEngine.prefHiddenCareerRush
+        val prefHiddenCareerTarget = PetAdventureEngine.prefHiddenCareerTarget
         val prefCustomWorkType = PetAdventureEngine.prefCustomWorkType
         val prefCustomWorkDuration = PetAdventureEngine.prefCustomWorkDuration
         val prefCareEnergyThreshold = PetAdventureEngine.prefCareEnergyThreshold
@@ -135,6 +139,7 @@ internal object EngineConfigLoader {
             "调度明细 学园:${UiDescUtils.schoolStageLabel(prefCustomSchoolStage)} " +
                     "科目:${UiDescUtils.courseSubjectLabel(prefCustomCourseSubject)} " +
                     "课时:${UiDescUtils.courseDurationLabel(prefCustomCourseDuration)} " +
+                    "隐藏职业速成:${onOff(prefHiddenCareerRush)}${if (prefHiddenCareerRush) "(${UiDescUtils.courseSubjectLabel(prefHiddenCareerTarget)})" else ""} " +
                     "场所:${UiDescUtils.workTypeLabel(prefCustomWorkType, placeTitle)} " +
                     "工时:${UiDescUtils.workDurationLabel(prefCustomWorkDuration)} " +
                     "体力≤$prefCareEnergyThreshold 清洁≤$prefCareCleanThreshold " +

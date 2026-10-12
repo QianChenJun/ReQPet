@@ -219,6 +219,12 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
         var prefCustomCourseDuration = 0
 
         @Volatile
+        var prefHiddenCareerRush = false
+
+        @Volatile
+        var prefHiddenCareerTarget = 0
+
+        @Volatile
         var prefCustomWorkType = 0
 
         @Volatile

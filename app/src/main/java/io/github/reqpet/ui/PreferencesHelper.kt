@@ -19,6 +19,8 @@ object PreferencesHelper {
     const val KEY_SCHOOL_STAGE = "key_custom_school_stage"
     const val KEY_COURSE_SUBJECT = "key_custom_course_subject"
     const val KEY_COURSE_DURATION = "key_custom_course_duration"
+    const val KEY_HIDDEN_CAREER_RUSH = "key_hidden_career_rush"
+    const val KEY_HIDDEN_CAREER_TARGET = "key_hidden_career_target"
     const val KEY_WORK_TYPE = "key_custom_work_type"
     const val KEY_WORK_DURATION = "key_custom_work_duration"
     const val KEY_HUMAN_LIKE_SLEEP = "key_human_like_sleep"
