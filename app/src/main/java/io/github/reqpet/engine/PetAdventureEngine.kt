@@ -41,6 +41,14 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
         @Volatile
         var pendingSettlementStoryId: String? = null
 
+        /**
+         * 服务器回带、本地未追踪、且已尝试过结算的 story。玩家手动开的探险会以这种形式残留：
+         * 服务器认为有未领取的任务而拒绝新的派遣（0x975e 回 135051），本地却没有它的追踪记录，
+         * 结算永远不会触发。收编后只对每条 story 试一次，避免每轮重复发结算包。
+         */
+        private val settleProbedStoryIds: MutableSet<String> =
+            java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
+
         /** 学园课程 story 形如 6100_<uuid>，与 PetStudyTask.startSchoolAwait 的 page=6100 对应。 */
         private const val STUDY_STORY_PREFIX = "6100_"
 private const val PREFS_NAME = "qqpet_inproc_prefs"
@@ -572,6 +580,21 @@ private const val PREFS_NAME = "qqpet_inproc_prefs"
                     "[状态校核] 服务器已确认无进行中的外出，丢弃未复核的本地到期时间，立即进入结算"
                 )
                 currentTaskEndTimeMillis = reconciledEnd
+            }
+            // 服务器说「没有进行中的外出」时仍会回带最近一条 story（含已到期的手动任务）。
+            // 这条 story 未领取会让服务器一直拒绝新派遣，而本地没有它的追踪记录、结算不会触发。
+            if (!story.isOngoing && !story.isReadyToSettle) {
+                val reported = story.storyId
+                if (!reported.isNullOrEmpty() && reported != lastActiveStoryId &&
+                    reported != pendingSettlementStoryId && settleProbedStoryIds.add(reported)
+                ) {
+                    sendLog(
+                        EngineLog.Level.WARN,
+                        "[状态校核] 服务器仍挂着一条已结束的 story ($reported)，先结算它以免阻塞新任务派遣"
+                    )
+                    pendingSettlementStoryId = reported
+                    currentTaskEndTimeMillis = 0
+                }
             }
             val hiredDecision = handleOngoingStory(context, petId, story)
             val justSettled = hiredDecision?.settled == true || handleStorySettlement(context, petId, story)
