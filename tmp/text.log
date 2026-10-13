@@ -1,0 +1,62 @@
+[10-13 15:17:19.185] I [EngineMetrics] EngineMetrics initialized
+[10-13 15:17:19.187] I [OidbChannel] 命中本地缓存发包代理类: com.tencent.mobileqq.qqpet.delegate.m
+[10-13 15:17:19.187] D [OidbChannel] 成功反射挂载 QQ 宠物原生发包代理: com.tencent.mobileqq.qqpet.delegate.m
+[10-13 15:17:19.197] I [QQPetCopilot] [内核连接] 发包引擎与代理已成功接驳就绪
+[10-13 15:17:19.343] I [QQPetCopilot] [会话变更] 未绑定 -> 1741820016，重置会话与缓存
+[10-13 15:17:19.357] D [AccountSessionStore] Cleared account-bound memory cache for all users
+[10-13 15:17:19.375] I [QQPetCopilot] [主循环] 正在查询外出状态
+[10-13 15:17:22.105] D [TimeConfigManager] [STUDY] Extracted duration: 1200s from server response (StoryID: 6100_64cc95fb-d817-4e3c-a45c-0a5835b8b801)
+[10-13 15:17:22.109] I [QQPetCopilot] [任务进行中] 小宠正在 进阶修习中 (剩余 15分28秒)，到期后将自动结算
+[10-13 15:17:22.864] D [LRUCacheManager] LRU put: claimed_bags_2026-286_1741820016 (TTL=86400s)
+[10-13 15:17:22.864] D [LRUCacheManager] LRU put: coin_bag_limit_1741820016 (TTL=86400s)
+[10-13 15:17:23.200] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:17:23.665] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:20:13.574] I [EngineMetrics] EngineMetrics initialized
+[10-13 15:20:13.576] I [OidbChannel] 命中本地缓存发包代理类: com.tencent.mobileqq.qqpet.delegate.m
+[10-13 15:20:13.576] D [OidbChannel] 成功反射挂载 QQ 宠物原生发包代理: com.tencent.mobileqq.qqpet.delegate.m
+[10-13 15:20:13.587] I [QQPetCopilot] [内核连接] 发包引擎与代理已成功接驳就绪
+[10-13 15:20:15.108] I [QQPetCopilot] [会话变更] 未绑定 -> 1741820016，重置会话与缓存
+[10-13 15:20:15.110] D [AccountSessionStore] Cleared account-bound memory cache for all users
+[10-13 15:20:15.118] I [QQPetCopilot] [主循环] 正在查询外出状态
+[10-13 15:20:15.203] D [TimeConfigManager] [STUDY] Extracted duration: 1200s from server response (StoryID: 6100_64cc95fb-d817-4e3c-a45c-0a5835b8b801)
+[10-13 15:20:15.204] I [QQPetCopilot] [任务进行中] 小宠正在 进阶修习中 (剩余 12分34秒)，到期后将自动结算
+[10-13 15:20:15.616] D [LRUCacheManager] LRU put: claimed_bags_2026-286_1741820016 (TTL=86400s)
+[10-13 15:20:15.617] D [LRUCacheManager] LRU put: coin_bag_limit_1741820016 (TTL=86400s)
+[10-13 15:20:16.094] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:20:16.806] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:20:17.422] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:20:18.037] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:20:18.652] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:20:19.265] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:20:19.907] I [PetSocialClient] fetchLikeList 回包: 解析到 20 位访客, hasMore=true
+[10-13 15:20:19.908] D [LRUCacheManager] LRU put: liked_uins_2026-286_1741820016 (TTL=86400s)
+[10-13 15:20:20.313] I [PetSocialClient] fetchLikeList 回包: 解析到 20 位访客, hasMore=true
+[10-13 15:20:20.696] I [PetCareClient] useStudyItem 回包: code=0, len=27
+[10-13 15:20:20.697] I [QQPetCopilot] [学习道具] 上课期间使用一个学习道具 (StoryID=6100_64cc95fb-d817-4e3c-a45c-0a5835b8b801)
+[10-13 15:20:20.698] I [QQPetCopilot] [任务进行中] 仍在进阶修习中，剩余 12分34秒，按维护巡检提前到 298 秒后再查，StoryID=6100_64cc95fb-d817-4e3c-a45c-0a5835b8b801
+[10-13 15:20:20.975] I [DiagnosticsExporter] [诊断导出] 每日快照完成: Download/ReQPet/auto/diag-20261013-152020.zip
+[10-13 15:21:57.166] I [EngineMetrics] EngineMetrics initialized
+[10-13 15:21:57.167] I [OidbChannel] 命中本地缓存发包代理类: com.tencent.mobileqq.qqpet.delegate.m
+[10-13 15:21:57.173] D [OidbChannel] 成功反射挂载 QQ 宠物原生发包代理: com.tencent.mobileqq.qqpet.delegate.m
+[10-13 15:21:57.193] I [QQPetCopilot] [配置] 学习:开 打工:开 冒险:开 结算:开 学习道具:开 疲惫转探险:开
+[10-13 15:21:57.195] I [QQPetCopilot] [内核连接] 发包引擎与代理已成功接驳就绪
+[10-13 15:21:57.398] I [QQPetCopilot] [会话变更] 未绑定 -> 1741820016，重置会话与缓存
+[10-13 15:21:57.435] D [AccountSessionStore] Cleared account-bound memory cache for all users
+[10-13 15:21:57.469] I [QQPetCopilot] [主循环] 正在查询外出状态
+[10-13 15:21:59.523] D [TimeConfigManager] [STUDY] Extracted duration: 1200s from server response (StoryID: 6100_64cc95fb-d817-4e3c-a45c-0a5835b8b801)
+[10-13 15:21:59.524] I [QQPetCopilot] [任务进行中] 小宠正在 进阶修习中 (剩余 10分50秒)，到期后将自动结算
+[10-13 15:21:59.879] D [LRUCacheManager] LRU put: claimed_bags_2026-286_1741820016 (TTL=86400s)
+[10-13 15:21:59.880] D [LRUCacheManager] LRU put: coin_bag_limit_1741820016 (TTL=86400s)
+[10-13 15:22:00.296] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:22:00.697] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:22:01.081] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:22:01.646] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:22:02.153] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:22:02.684] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:22:03.281] I [PetSocialClient] fetchLikeList 回包: 解析到 20 位访客, hasMore=true
+[10-13 15:22:03.282] D [LRUCacheManager] LRU put: liked_uins_2026-286_1741820016 (TTL=86400s)
+[10-13 15:22:03.679] I [PetSocialClient] fetchLikeList 回包: 解析到 20 位访客, hasMore=true
+[10-13 15:22:03.680] I [QQPetCopilot] [学习道具] 为本条 story 使用道具 (StoryID=6100_64cc95fb-d817-4e3c-a45c-0a5835b8b801)
+[10-13 15:22:04.085] I [PetCareClient] useStudyItem 回包: code=0, len=27
+[10-13 15:22:04.085] I [QQPetCopilot] [学习道具] 上课期间使用一个学习道具 (StoryID=6100_64cc95fb-d817-4e3c-a45c-0a5835b8b801)
+[10-13 15:22:04.085] I [QQPetCopilot] [任务进行中] 仍在进阶修习中，剩余 10分50秒，按维护巡检提前到 298 秒后再查，StoryID=6100_64cc95fb-d817-4e3c-a45c-0a5835b8b801

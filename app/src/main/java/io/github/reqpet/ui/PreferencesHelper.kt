@@ -20,6 +20,7 @@ object PreferencesHelper {
     const val KEY_COURSE_SUBJECT = "key_custom_course_subject"
     const val KEY_COURSE_DURATION = "key_custom_course_duration"
     const val KEY_AUTO_USE_STUDY_ITEM = "key_auto_use_study_item"
+    const val KEY_ITEM_USED_STORY = "key_item_used_story"
     const val KEY_WORK_TYPE = "key_custom_work_type"
     const val KEY_WORK_DURATION = "key_custom_work_duration"
     const val KEY_HUMAN_LIKE_SLEEP = "key_human_like_sleep"
@@ -45,4 +46,5 @@ object PreferencesHelper {
     const val KEY_STRANGER_UIN_POOL = "key_stranger_uin_pool"
     const val KEY_DISABLE_TINKER_PATCH = "key_disable_tinker_patch"
     const val KEY_ACTION_TOAST = "key_action_toast"
+    const val KEY_DIAG_EXPORT_DATE = "key_diag_export_date"
 }

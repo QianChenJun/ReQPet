@@ -43,6 +43,7 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
 
         /** 学园课程 story 形如 6100_<uuid>，与 PetStudyTask.startSchoolAwait 的 page=6100 对应。 */
         private const val STUDY_STORY_PREFIX = "6100_"
+private const val PREFS_NAME = "qqpet_inproc_prefs"
 
         /** 已消耗学习道具的 story，保证一条课程只用一个。 */
         @Volatile
@@ -400,6 +401,7 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
                         15000L
                     }
                     val sleepStarted = RuntimeDiagnostics.nowMs()
+                    DiagnosticsExporter.autoSnapshotDaily(context)
                     RuntimeDiagnostics.event("sleep_start", "loop" to loopId, "planned_ms" to delayMs)
                     try {
                         delay(delayMs.milliseconds)
@@ -576,7 +578,7 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
             performMaintenance(context, petId, story, forceCareCheck = justSettled)
             val rem = story.remaining ?: 0L
             if (story.isOngoing && hiredDecision?.hasRecalled != true) {
-                maybeUseStudyItem(story.storyId)
+                maybeUseStudyItem(context, story.storyId)
                 val kind = currentTaskTypeName.ifEmpty { "外出" }
                 val outingSleep = if (hiredDecision != null && hiredDecision.nextSleepMillis > 0L) {
                     hiredDecision.nextSleepMillis
@@ -620,12 +622,22 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
      * 学习道具按「一条 story 一个」使用：模块自己报名的课在报名成功那一刻用掉，手动在游戏里
      * 上课、或模块处于疲劳避让期时在这里补齐；同一条 story 只用一次，避免每轮巡检重复消耗。
      */
-    private suspend fun maybeUseStudyItem(storyId: String?) {
-        if (!prefAutoUseStudyItem || storyId == null || !storyId.startsWith(STUDY_STORY_PREFIX)) return
-        if (storyId == itemUsedStoryId) return
+    private suspend fun maybeUseStudyItem(context: Context, storyId: String?) {
+        if (!prefAutoUseStudyItem) return
+        if (storyId == null || !storyId.startsWith(STUDY_STORY_PREFIX)) return
+        // 进程重启会清空内存标记，同日同一条 story 必须靠落盘记录避免重复消耗道具。
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val usedKey = "${PreferencesHelper.KEY_ITEM_USED_STORY}_${currentActiveUin ?: "anon"}"
+        if (itemUsedStoryId == storyId || prefs.getString(usedKey, null) == storyId) {
+            sendLog(EngineLog.Level.DEBUG, "[学习道具] 本条 story 已使用过道具，跳过 (StoryID=$storyId)")
+            return
+        }
+        sendLog("[学习道具] 为本条 story 使用道具 (StoryID=$storyId)")
         val (code, err) = PetCareTask.useStudyItemAwait(bridge)
+        RuntimeDiagnostics.event("study_item", "code" to code, "story_id" to RuntimeDiagnostics.id(storyId))
         if (code == 0) {
             itemUsedStoryId = storyId
+            prefs.edit().putString(usedKey, storyId).apply()
             sendLog("[学习道具] 上课期间使用一个学习道具 (StoryID=$storyId)")
         } else {
             sendLog(EngineLog.Level.WARN, "[学习道具] 使用未成功 (code=$code, err=${err ?: "无"})，下轮再试")
@@ -812,8 +824,15 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
     suspend fun fetchLikeListAwait(extra: String = ""): Pair<Int, List<QQPetDirectBridge.LikeMember>> =
         PetEngineApi.fetchLikeListAwait(bridge, extra)
 
+    private var lastConfigEcho: String? = null
+
     fun reloadConfig(context: Context) {
         EngineConfigLoader.reload(context, onDebugLogChanged = { prefDebugLog = it })
+        val echo = EngineConfigLoader.runtimeEcho()
+        if (echo != lastConfigEcho) {
+            lastConfigEcho = echo
+            sendLog(EngineLog.Level.INFO, "[配置] $echo")
+        }
     }
 
     fun logConfigSummary(context: Context) = EngineConfigLoader.logSummary(context)

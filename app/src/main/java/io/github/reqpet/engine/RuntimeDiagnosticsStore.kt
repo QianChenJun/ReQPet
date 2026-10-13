@@ -186,23 +186,27 @@ internal class RuntimeDiagnosticBuffer(
 
 internal class RuntimeDiagnosticWriterBusy : IOException("diagnostics writer already active")
 
-/** runtime.log is newest; .1, .2, .3 are progressively older. Reopens append, never wipes a run. */
+/**
+ * <base>.log is newest; .1, .2, .3 are progressively older. Reopens append, never wipes a run.
+ * Each base name owns its own lock file, so sibling logs can share one directory.
+ */
 internal class RuntimeDiagnosticFileWriter(
     private val directory: File,
     private val maxFileBytes: Long = 2L * 1024 * 1024,
-    private val rotatedFiles: Int = 3
+    private val rotatedFiles: Int = 3,
+    private val baseName: String = "runtime"
 ) : Closeable {
-    private val current = File(directory, "runtime.log")
+    private val current = File(directory, "$baseName.log")
     private var output: FileOutputStream? = null
     private var size = 0L
     private var ownershipFile: RandomAccessFile? = null
     private var ownershipLock: FileLock? = null
 
     init {
-        require(maxFileBytes > 0 && rotatedFiles >= 1)
+        require(maxFileBytes > 0 && rotatedFiles >= 1 && baseName.isNotEmpty())
         if (!directory.isDirectory && !directory.mkdirs()) throw IOException("diagnostics directory unavailable")
         try {
-            ownershipFile = RandomAccessFile(File(directory, ".writer.lock"), "rw")
+            ownershipFile = RandomAccessFile(File(directory, ".$baseName.lock"), "rw")
             ownershipLock = try {
                 ownershipFile!!.channel.tryLock() ?: throw RuntimeDiagnosticWriterBusy()
             } catch (_: OverlappingFileLockException) {
@@ -242,11 +246,11 @@ internal class RuntimeDiagnosticFileWriter(
     private fun rotate() {
         output?.close()
         output = null
-        val oldest = File(directory, "runtime.$rotatedFiles.log")
+        val oldest = File(directory, "$baseName.$rotatedFiles.log")
         if (oldest.exists() && !oldest.delete()) throw IOException("diagnostics rotation delete failed")
         for (index in rotatedFiles - 1 downTo 0) {
-            val source = if (index == 0) current else File(directory, "runtime.$index.log")
-            val target = File(directory, "runtime.${index + 1}.log")
+            val source = if (index == 0) current else File(directory, "$baseName.$index.log")
+            val target = File(directory, "$baseName.${index + 1}.log")
             if (source.exists() && !source.renameTo(target)) throw IOException("diagnostics rotation rename failed")
         }
     }

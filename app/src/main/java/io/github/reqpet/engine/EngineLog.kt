@@ -70,6 +70,7 @@ object EngineLog {
             entry
         }
         HookLog.log(TAG, "[${stamped.source}] ${level.tag} ${stamped.message}")
+        EngineTextLog.append(level, stamped.source, stamped.message)
         _logFlow.tryEmit(stamped)
     }
 

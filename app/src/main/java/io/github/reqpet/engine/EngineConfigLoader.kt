@@ -80,6 +80,13 @@ internal object EngineConfigLoader {
 
     private fun onOff(enabled: Boolean): String = if (enabled) "开" else "关"
 
+    /** 运行期开关快照，仅在与上一轮回显不同时写日志，保证离线日志能解释调度为何没执行。 */
+    fun runtimeEcho(): String =
+        "学习:${onOff(PetAdventureEngine.enableStudy)} 打工:${onOff(PetAdventureEngine.enableWork)} " +
+                "冒险:${onOff(PetAdventureEngine.enableAdventure)} 结算:${onOff(PetAdventureEngine.enableSettle)} " +
+                "学习道具:${onOff(PetAdventureEngine.prefAutoUseStudyItem)} " +
+                "疲惫转探险:${onOff(PetAdventureEngine.enableFatigueToAdventure)}"
+
     fun logSummary(context: Context) {
         val masterEnabled = PetAdventureEngine.masterEnabled
         val enableStudy = PetAdventureEngine.enableStudy

@@ -1,0 +1,13 @@
+[10-13 15:17:19.185] I [EngineMetrics] EngineMetrics initialized
+[10-13 15:17:19.187] I [OidbChannel] 命中本地缓存发包代理类: com.tencent.mobileqq.qqpet.delegate.m
+[10-13 15:17:19.187] D [OidbChannel] 成功反射挂载 QQ 宠物原生发包代理: com.tencent.mobileqq.qqpet.delegate.m
+[10-13 15:17:19.197] I [QQPetCopilot] [内核连接] 发包引擎与代理已成功接驳就绪
+[10-13 15:17:19.343] I [QQPetCopilot] [会话变更] 未绑定 -> 1741820016，重置会话与缓存
+[10-13 15:17:19.357] D [AccountSessionStore] Cleared account-bound memory cache for all users
+[10-13 15:17:19.375] I [QQPetCopilot] [主循环] 正在查询外出状态
+[10-13 15:17:22.105] D [TimeConfigManager] [STUDY] Extracted duration: 1200s from server response (StoryID: 6100_64cc95fb-d817-4e3c-a45c-0a5835b8b801)
+[10-13 15:17:22.109] I [QQPetCopilot] [任务进行中] 小宠正在 进阶修习中 (剩余 15分28秒)，到期后将自动结算
+[10-13 15:17:22.864] D [LRUCacheManager] LRU put: claimed_bags_2026-286_1741820016 (TTL=86400s)
+[10-13 15:17:22.864] D [LRUCacheManager] LRU put: coin_bag_limit_1741820016 (TTL=86400s)
+[10-13 15:17:23.200] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true
+[10-13 15:17:23.665] I [PetSocialClient] fetchFriendCoinBags: 本页好友=10, 发现福袋=0, hasMore=true

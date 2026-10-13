@@ -3,6 +3,7 @@ package io.github.reqpet.ui.compose.section
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -10,11 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import io.github.reqpet.engine.DiagnosticsExporter
 import io.github.reqpet.ui.PreferencesHelper
 import io.github.reqpet.ui.compose.ActionRow
 import io.github.reqpet.ui.compose.SectionHeader
@@ -27,6 +32,28 @@ import java.io.File
 fun DiagnosticsSection(state: SettingsState) {
     val context = LocalContext.current
     val appContext = remember(context) { context.applicationContext ?: context }
+
+    var exporting by remember { mutableStateOf(false) }
+    var exportResult by remember { mutableStateOf<String?>(null) }
+    val exportHint = remember {
+        "保存到 ${DiagnosticsExporter.RELATIVE_ROOT}（文件管理器可见），" +
+            "每日 0 点后自动快照最近 ${DiagnosticsExporter.AUTO_KEEP_COUNT} 份"
+    }
+
+    val sharePackage: (android.net.Uri) -> Unit = { uri ->
+        try {
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "application/zip"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(
+                Intent.createChooser(send, "分享诊断包").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        } catch (_: Throwable) {
+            Toast.makeText(context, "无法直接分享，请在文件管理器打开 ${DiagnosticsExporter.RELATIVE_ROOT}", Toast.LENGTH_LONG).show()
+        }
+    }
 
     val externalDir = remember(appContext) {
         try {
@@ -54,6 +81,44 @@ fun DiagnosticsSection(state: SettingsState) {
 
     Column(modifier = Modifier.fillMaxWidth()) {
         LogSection(state)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        SectionHeader("诊断导出")
+        SettingsGroup {
+            item {
+                ActionRow(
+                    title = "导出诊断包",
+                    subtitle = "$exportHint\n（打包 runtime/text 事件、OIDB 抓包、开关快照与设备信息）",
+                    trailing = if (exporting) "导出中" else "导出",
+                    onClick = {
+                        if (!exporting) {
+                            exporting = true
+                            DiagnosticsExporter.exportNow(context) { message ->
+                                exporting = false
+                                exportResult = message
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                )
+            }
+            item {
+                val uri = DiagnosticsExporter.lastExportUri()
+                ActionRow(
+                    title = "分享最近诊断包",
+                    subtitle = exportResult ?: "导出后可一键发给排查者",
+                    trailing = if (uri != null) "分享" else null,
+                    onClick = {
+                        if (uri == null) {
+                            Toast.makeText(context, "请先导出诊断包", Toast.LENGTH_SHORT).show()
+                        } else {
+                            sharePackage(uri)
+                        }
+                    }
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

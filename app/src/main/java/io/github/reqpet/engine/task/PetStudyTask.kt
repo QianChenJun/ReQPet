@@ -1,5 +1,6 @@
 package io.github.reqpet.engine.task
 
+import io.github.reqpet.engine.RuntimeDiagnostics
 import io.github.reqpet.engine.TaskLogger
 import io.github.reqpet.engine.model.StudyDispatchParam
 import io.github.reqpet.engine.model.StudyDispatchResult
@@ -67,6 +68,15 @@ object PetStudyTask {
             onLog.warn("[学园调度] 阶段 $targetStage 没有与所设科目或时长匹配的课程，本次不报名")
             return StudyDispatchResult(code = -3, errorMsg = "没有与所设科目或时长匹配的课程")
         }
+        // 记录选中课程的疲劳判定，供事后回答「这轮为什么去上课 / 为什么避让」。
+        RuntimeDiagnostics.event(
+            "study_course",
+            "fatigued" to targetCourse.isFatigued,
+            "fatigue_tip" to !targetCourse.eventTips.isNullOrEmpty(),
+            "sub_event" to targetCourse.subEventType,
+            "cost" to targetCourse.costTime,
+            "avoid" to (param.enableFatigueToAdventure && targetCourse.isFatigued)
+        )
         if (param.enableFatigueToAdventure && targetCourse.isFatigued) {
             return StudyDispatchResult(code = -2, isFatigued = true, fatigueTip = targetCourse.eventTips)
         }

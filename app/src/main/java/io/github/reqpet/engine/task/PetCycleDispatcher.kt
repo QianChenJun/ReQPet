@@ -47,6 +47,7 @@ object PetCycleDispatcher {
         }
 
         val attempts = available.size
+        val startCursor = PetAdventureEngine.roundRobinCursor
         var dispatched = false
         for (i in 0 until attempts) {
             val target = available[PetAdventureEngine.roundRobinCursor % available.size]
@@ -62,7 +63,8 @@ object PetCycleDispatcher {
             RuntimeDiagnostics.event(
                 "dispatch_result", "cycle" to PetAdventureEngine.currentCycleId,
                 "transaction" to PetAdventureEngine.currentTransactionId,
-                "outcome" to "started", "sleep_ms" to 5_000L
+                "outcome" to "started", "sleep_ms" to 5_000L,
+                "candidates" to available.joinToString("/"), "cursor" to startCursor
             )
             return 5000L
         }
@@ -73,6 +75,7 @@ object PetCycleDispatcher {
             "dispatch_result", "cycle" to PetAdventureEngine.currentCycleId,
             "transaction" to PetAdventureEngine.currentTransactionId,
             "outcome" to "failed", "attempts" to attempts,
+            "candidates" to available.joinToString("/"), "cursor" to startCursor,
             "consecutive_failures" to consecutiveFailureCount, "sleep_ms" to backoff
         )
         PetAdventureEngine.sendLog(

@@ -81,13 +81,19 @@ object RuntimeDiagnostics {
                     } catch (_: Throwable) {
                         null
                     }
+                    val directory = if (external != null) {
+                        external
+                    } else {
+                        File(appContext.filesDir, "qpet-diagnostics")
+                    }
+                    EngineTextLog.bind(directory)
                     val writer = try {
                         if (external == null) null else RuntimeDiagnosticFileWriter(external)
                     } catch (busy: RuntimeDiagnosticWriterBusy) {
                         throw busy
                     } catch (_: Throwable) {
                         null
-                    } ?: RuntimeDiagnosticFileWriter(File(appContext.filesDir, "qpet-diagnostics"))
+                    } ?: RuntimeDiagnosticFileWriter(directory)
                     writer.use {
                         buffer.writeControl(
                             it, "run_start", "schema" to 1, "pid" to Process.myPid(),
