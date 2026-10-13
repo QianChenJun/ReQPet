@@ -2,6 +2,7 @@ package io.github.reqpet.protocol.channel
 
 import io.github.reqpet.engine.EngineLog
 import io.github.reqpet.engine.PetAdventureEngine
+import io.github.reqpet.engine.ProtocolProbe
 import android.content.Context
 import java.util.Base64
 import io.github.reqpet.RuntimeSwitches
@@ -542,6 +543,7 @@ open class OidbChannel(
                     val bundle = args.getOrNull(2) as? android.os.Bundle
                     val errorMsg = bundle?.getString("data_error_msg") ?: bundle?.getString("error_msg")
                     OidbSniffer.recordModuleResponse(commandName, command, subCommand, code, data)
+                    ProtocolProbe.recordResponse(commandName, code, data, errorMsg)
                     invokeCallback(attempt, callback, code, data, errorMsg, "response", responseAtMs)
                 }
                 null

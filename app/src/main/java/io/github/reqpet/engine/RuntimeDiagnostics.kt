@@ -28,6 +28,9 @@ object RuntimeDiagnostics {
     private val warned = AtomicBoolean()
 
     @Volatile
+    private var resolvedDirectory: File? = null
+
+    @Volatile
     var detailedMode: Boolean = false
 
     fun nowMs(): Long = SystemClock.elapsedRealtime()
@@ -63,6 +66,9 @@ object RuntimeDiagnostics {
         }
     }
 
+    /** 落盘目录：外置目录可用时优先，否则回落应用私有目录。 */
+    fun directory(): File? = resolvedDirectory
+
     fun bind(context: Context) {
         if (!bound.compareAndSet(false, true)) return
         try {
@@ -74,18 +80,20 @@ object RuntimeDiagnostics {
             } catch (_: Throwable) {
                 detailedMode = false
             }
+            // 目录在 bind 内同步解析，使 directory() 在 bind 返回后即可用。
+            val external = try {
+                appContext.getExternalFilesDir("qpet-diagnostics")
+            } catch (_: Throwable) {
+                null
+            }
+            val directory = if (external != null) {
+                external
+            } else {
+                File(appContext.filesDir, "qpet-diagnostics")
+            }
+            resolvedDirectory = directory
             val thread = Thread({
                 try {
-                    val external = try {
-                        appContext.getExternalFilesDir("qpet-diagnostics")
-                    } catch (_: Throwable) {
-                        null
-                    }
-                    val directory = if (external != null) {
-                        external
-                    } else {
-                        File(appContext.filesDir, "qpet-diagnostics")
-                    }
                     EngineTextLog.bind(directory)
                     val writer = try {
                         if (external == null) null else RuntimeDiagnosticFileWriter(external)
