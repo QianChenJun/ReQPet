@@ -98,9 +98,9 @@ function Show-Tail($title, $lines, $count) {
 }
 
 function Show-Digest($outDir) {
-    $textLines = Get-Text (Join-Path $outDir "text.log")
-    $traceLines = Get-Text (Join-Path $outDir "oidb_trace.log")
-    $runtimeLines = Get-Text (Join-Path $outDir "runtime.log")
+    $textLines = @(Get-Text (Join-Path $outDir "text.log"))
+    $traceLines = @(Get-Text (Join-Path $outDir "oidb_trace.log"))
+    $runtimeLines = @(Get-Text (Join-Path $outDir "runtime.log"))
     $prefsPath = Join-Path $outDir "qqpet_inproc_prefs.xml"
 
     Write-Host ""
@@ -163,15 +163,16 @@ if ($Mode -eq "digest") { Show-Digest $OutDir; return }
 if ($Mode -eq "auto") {
     Write-Host "等待设备接入（最多 $WaitMinutes 分钟）..."
     $deadline = (Get-Date).AddMinutes($WaitMinutes)
-    while ((Get-Date) -lt $deadline -and (Get-OnlineSerials $adb).Count -eq 0) {
+    while ((Get-Date) -lt $deadline -and @(Get-OnlineSerials $adb).Count -eq 0) {
         Start-Sleep -Seconds 3
     }
-    if ((Get-OnlineSerials $adb).Count -eq 0) { throw "等待 $WaitMinutes 分钟仍无设备" }
+    if (@(Get-OnlineSerials $adb).Count -eq 0) { throw "等待 $WaitMinutes 分钟仍无设备" }
     Write-Host "设备已接入，10 秒后开始采集..."
     Start-Sleep -Seconds 10
 }
 
-$online = Get-OnlineSerials $adb
+# 注意：函数返回单元素集合会被 PowerShell 展平成标量，必须用 @() 包回数组。
+$online = @(Get-OnlineSerials $adb)
 if ($Serial) {
     if ($online -notcontains $Serial) { throw "设备 $Serial 不在线（当前：$($online -join ', ')）" }
     $target = $Serial
