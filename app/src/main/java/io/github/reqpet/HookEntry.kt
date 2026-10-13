@@ -304,6 +304,8 @@ class HookEntry : XposedModule() {
                         val snifferPrefs = appContext.getSharedPreferences("qqpet_inproc_prefs", Context.MODE_PRIVATE)
                         io.github.reqpet.hook.OidbSniffer.isEnabled =
                             snifferPrefs.getBoolean(PreferencesHelper.KEY_DEBUG_LOG, false)
+                        io.github.reqpet.hook.OidbSniffer.traceFile =
+                            java.io.File(appContext.filesDir, "oidb_trace.log")
                         io.github.reqpet.protocol.channel.OidbChannel.resolvedDelegateClass?.let { cls ->
                             val sendMethod = cls.methods + cls.declaredMethods
                             io.github.reqpet.hook.OidbSniffer.install(
