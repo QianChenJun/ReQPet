@@ -35,6 +35,23 @@ object PetCareTask {
             Triple(-99, 0, 0)
         }
 
+    suspend fun useStudyItemAwait(
+        bridge: QQPetDirectBridge,
+        timeoutMs: Long = NETWORK_TIMEOUT_MS
+    ): Pair<Int, String?> =
+        try {
+            withTimeoutOrNull(timeoutMs) {
+                suspendCancellableCoroutine { cont ->
+                    bridge.useStudyItem { code, errorMsg ->
+                        if (cont.isActive) cont.resume(Pair(code, errorMsg))
+                    }
+                }
+            } ?: Pair(-99, "超时")
+        } catch (t: Throwable) {
+            if (t is kotlinx.coroutines.CancellationException) throw t
+            Pair(-99, t.message)
+        }
+
     suspend fun feedAwait(
         bridge: QQPetDirectBridge,
         petId: String,

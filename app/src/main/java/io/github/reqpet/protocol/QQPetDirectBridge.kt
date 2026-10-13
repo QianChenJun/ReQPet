@@ -363,6 +363,9 @@ class QQPetDirectBridge(classLoader: ClassLoader, context: Context? = null) {
     fun queryFeedTimes(callback: (code: Int, remain: Int, total: Int) -> Unit) =
         careClient.queryFeedTimes(callback)
 
+    fun useStudyItem(callback: (code: Int, errorMsg: String?) -> Unit) =
+        careClient.useStudyItem(callback)
+
     fun bath(
         petId: String,
         cleanValue: Int = 100,

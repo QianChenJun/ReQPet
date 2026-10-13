@@ -79,6 +79,14 @@ object PetStudyTask {
             targetCourse.subEventType
         )
         if (code == 0 && !storyId.isNullOrEmpty()) {
+            if (param.autoUseStudyItem) {
+                val (itemCode, itemErr) = PetCareTask.useStudyItemAwait(bridge)
+                if (itemCode == 0) {
+                    onLog("[学习道具] 开课后已使用一个学习道具")
+                } else {
+                    onLog.warn("[学习道具] 使用未成功 (code=$itemCode, err=${itemErr ?: "无"})，本轮不再重试")
+                }
+            }
             return StudyDispatchResult(
                 code = 0,
                 storyId = storyId,

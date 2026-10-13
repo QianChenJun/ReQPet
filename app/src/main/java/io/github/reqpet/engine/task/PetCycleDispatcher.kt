@@ -348,7 +348,8 @@ object PetCycleDispatcher {
             enableFatigueToAdventure = PetAdventureEngine.enableFatigueToAdventure,
             studyAttributeCursor = PetAdventureEngine.studyAttributeCursor,
             learnedStudySubEvent = PetAdventureEngine.learnedStudySubEvent,
-            learnedStudyName = PetAdventureEngine.learnedStudyName
+            learnedStudyName = PetAdventureEngine.learnedStudyName,
+            autoUseStudyItem = PetAdventureEngine.prefAutoUseStudyItem
         )
         val res = PetStudyTask.executeAdaptiveStudy(bridge, petId, param) { level, msg ->
             PetAdventureEngine.sendLog(

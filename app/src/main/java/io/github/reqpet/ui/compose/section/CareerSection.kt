@@ -30,6 +30,7 @@ import io.github.reqpet.protocol.QQPetDirectBridge
 import io.github.reqpet.ui.PreferencesHelper
 import io.github.reqpet.ui.compose.ActionRow
 import io.github.reqpet.ui.compose.SectionHeader
+import io.github.reqpet.ui.compose.ToggleRow
 import io.github.reqpet.ui.compose.SegmentedChoiceRow
 import io.github.reqpet.ui.compose.SettingsGroup
 import io.github.reqpet.ui.compose.ExpandablePanel
@@ -192,6 +193,12 @@ private fun StudyPanel(state: SettingsState, details: QQPetDirectBridge.SecondMa
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
+        ToggleRow(
+            title = "自动使用学习道具",
+            checked = state.bool(PreferencesHelper.KEY_AUTO_USE_STUDY_ITEM, false),
+            onCheckedChange = { state.setBool(PreferencesHelper.KEY_AUTO_USE_STUDY_ITEM, it) },
+            subtitle = "每次成功开课后自动消耗一个学习道具（道具耗尽后服务端会拒绝，模块只记录失败不再重试）"
+        )
     }
 }
 

@@ -408,6 +408,23 @@ class PetCareProtocolClient(
         }
     }
 
+    /**
+     * 使用学习道具（0x994b_1，请求体 0801 与 QQ 客户端实测一致；每次调用消耗一个道具）。
+     * 道具剩余数量由 0x9949_1 库存回包侧确认，本接口不猜测其余字段。
+     */
+    fun useStudyItem(callback: (code: Int, errorMsg: String?) -> Unit) {
+        val bodyBytes = ProtoWire.message()
+            .writeVarint(1, 1L)
+            .toByteArray()
+        channel.sendOidb("OidbSvcTrpcTcp.0x994b_1", 39243, 1, bodyBytes) { code, data, err ->
+            EngineLog.i(
+                "PetCareClient",
+                "useStudyItem 回包: code=$code, len=${data?.size ?: 0}"
+            )
+            callback(code, err)
+        }
+    }
+
     fun queryFeedTimes(callback: (code: Int, remain: Int, total: Int) -> Unit) {
         val bodyBytes = tryReflectFeedTimesBody() ?: ByteArray(0)
         channel.sendOidb("OidbSvcTrpcTcp.0x9949_1", 39241, 1, bodyBytes) { code, data, err ->
