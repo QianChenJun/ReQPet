@@ -50,7 +50,7 @@ object OidbSniffer {
                     continue
                 }
                 try {
-                    if (file.length() > MAX_TRACE_BYTES) file.delete()
+                    if (file.length() > MAX_TRACE_BYTES) trim(file)
                     BufferedWriter(FileWriter(file, true)).use { writer ->
                         writer.append(format.format(Date()))
                         writer.append(' ')
@@ -64,6 +64,31 @@ object OidbSniffer {
         }, "QPetTraceWriter")
         thread.isDaemon = true
         thread.start()
+    }
+
+    /**
+     * 模块自己发出的包经 Invoker.Type.ORIGIN 调用原方法，刻意绕过所有 hook，代理 hook 看不到它们。
+     * 这里显式补记，让 traceFile 同时覆盖「QQ 界面发起」与「模块发起」两类信令。
+     */
+    fun recordModuleSend(commandName: String, command: Int, subCommand: Int, request: ByteArray) {
+        if (!isEnabled) return
+        try {
+            trace(
+                "[oidb-own] cmd=$commandName ($command/$subCommand) " +
+                    "len=${request.size} body=${bytesToHex(request.take(MAX_BODY_DUMP / 2))}"
+            )
+        } catch (t: Throwable) {
+            if (t is kotlinx.coroutines.CancellationException) throw t
+        }
+    }
+
+    /** 超过上限时保留尾部而不是整份删除：隔夜要查的领取记录不能因为文件写满而消失。 */
+    private fun trim(file: File) {
+        val keepBytes = (MAX_TRACE_BYTES / 2).toInt()
+        val all = file.readBytes()
+        var start = (all.size - keepBytes).coerceAtLeast(0)
+        while (start < all.size && all[start] != '\n'.code.toByte()) start++
+        file.writeBytes(all.copyOfRange(start, all.size))
     }
 
     fun install(classLoader: ClassLoader, delegateClass: Class<*>, sendMethod: Method) {

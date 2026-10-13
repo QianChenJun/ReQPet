@@ -9,6 +9,7 @@ import io.github.reqpet.HookEntry
 import io.github.reqpet.engine.AccountSessionGuard
 import io.github.reqpet.engine.RuntimeDiagnostics
 import io.github.reqpet.hook.HookApi
+import io.github.reqpet.hook.OidbSniffer
 import io.github.libxposed.api.XposedInterface
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
@@ -546,6 +547,7 @@ open class OidbChannel(
             }
             val invoker = sendOidbInvoker
             requestEvent("request_send", attempt)
+            OidbSniffer.recordModuleSend(commandName, command, subCommand, request)
             // 捕获实际代理调用边界，包含同步回包，不把代理发现或本地拒绝计为网络耗时。
             attempt.sentAtMs = RuntimeDiagnostics.nowMs()
             if (invoker != null) {
