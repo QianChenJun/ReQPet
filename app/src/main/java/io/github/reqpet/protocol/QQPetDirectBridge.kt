@@ -366,6 +366,9 @@ class QQPetDirectBridge(classLoader: ClassLoader, context: Context? = null) {
     fun useStudyItem(callback: (code: Int, errorMsg: String?) -> Unit) =
         careClient.useStudyItem(callback)
 
+    fun queryItemInventory(callback: (code: Int, raw: ByteArray?) -> Unit) =
+        careClient.queryItemInventory(callback)
+
     fun bath(
         petId: String,
         cleanValue: Int = 100,

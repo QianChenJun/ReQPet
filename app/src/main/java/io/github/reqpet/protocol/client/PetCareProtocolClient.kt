@@ -30,6 +30,7 @@ class PetCareProtocolClient(
     companion object {
         private const val TAG = "PetCareProtocolClient"
         private const val DEFAULT_FOOD_ID = 9990032L
+        private const val INVENTORY_DUMP_LIMIT = 512
         private val FEED_PB_CANDIDATES = listOf("p54.b", "t64.b", "zh5.b")
         internal fun validateFeedPbSchema(candidateCls: Class<*>, nanoCls: Class<*>): Boolean {
             if (!nanoCls.isAssignableFrom(candidateCls)) return false
@@ -425,8 +426,25 @@ class PetCareProtocolClient(
         }
     }
 
-    fun queryFeedTimes(callback: (code: Int, remain: Int, total: Int) -> Unit) {
-        val bodyBytes = tryReflectFeedTimesBody() ?: ByteArray(0)
+    /**
+     * 查询道具库存（0x9949_1，请求体为空，与 QQ 客户端实测一致）。
+     * 回包字段语义尚未确认，这里记录原始 hex 供离线比对，不做猜测性解析。
+     */
+    fun queryItemInventory(callback: (code: Int, raw: ByteArray?) -> Unit) {
+        channel.sendOidb("OidbSvcTrpcTcp.0x9949_1", 39241, 1, ByteArray(0)) { code, data, err ->
+            val hex = data?.take(INVENTORY_DUMP_LIMIT)?.joinToString("") { "%02x".format(it) } ?: ""
+            EngineLog.i(
+                "PetCareClient",
+                "[道具库存] 回包: code=$code, len=${data?.size ?: 0}, body=$hex"
+            )
+            if (code != 0) {
+                EngineLog.w("PetCareClient", "[道具库存] 查询失败: code=$code, err=${err ?: "无"}")
+            }
+            callback(code, data)
+        }
+    }
+
+    fun queryFeedTimes(callback: (code: Int, remain: Int, total: Int) -> Unit) {        val bodyBytes = tryReflectFeedTimesBody() ?: ByteArray(0)
         channel.sendOidb("OidbSvcTrpcTcp.0x9949_1", 39241, 1, bodyBytes) { code, data, err ->
             if (code == 0 && data != null) {
                 val remain = (ProtoWire.firstVarint(data, 1) ?: 0L).toInt()

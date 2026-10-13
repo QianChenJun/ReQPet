@@ -52,6 +52,23 @@ object PetCareTask {
             Pair(-99, t.message)
         }
 
+    suspend fun queryItemInventoryAwait(
+        bridge: QQPetDirectBridge,
+        timeoutMs: Long = NETWORK_TIMEOUT_MS
+    ): Pair<Int, ByteArray?> =
+        try {
+            withTimeoutOrNull(timeoutMs) {
+                suspendCancellableCoroutine { cont ->
+                    bridge.queryItemInventory { code, raw ->
+                        if (cont.isActive) cont.resume(Pair(code, raw))
+                    }
+                }
+            } ?: Pair(-99, null)
+        } catch (t: Throwable) {
+            if (t is kotlinx.coroutines.CancellationException) throw t
+            Pair(-99, null)
+        }
+
     suspend fun feedAwait(
         bridge: QQPetDirectBridge,
         petId: String,

@@ -630,6 +630,8 @@ private const val PREFS_NAME = "qqpet_inproc_prefs"
         val usedKey = "${PreferencesHelper.KEY_ITEM_USED_STORY}_${currentActiveUin ?: "anon"}"
         if (itemUsedStoryId == storyId || prefs.getString(usedKey, null) == storyId) {
             sendLog(EngineLog.Level.DEBUG, "[学习道具] 本条 story 已使用过道具，跳过 (StoryID=$storyId)")
+            // 上课期间周期性采样库存：QQ 自身也会消耗道具，只有对照采样才能定位剩余数量字段。
+            probeItemInventory("skip")
             return
         }
         sendLog("[学习道具] 为本条 story 使用道具 (StoryID=$storyId)")
@@ -639,9 +641,21 @@ private const val PREFS_NAME = "qqpet_inproc_prefs"
             itemUsedStoryId = storyId
             prefs.edit().putString(usedKey, storyId).apply()
             sendLog("[学习道具] 上课期间使用一个学习道具 (StoryID=$storyId)")
+            probeItemInventory("after_use")
         } else {
             sendLog(EngineLog.Level.WARN, "[学习道具] 使用未成功 (code=$code, err=${err ?: "无"})，下轮再试")
         }
+    }
+
+    /**
+     * 采样道具库存：QQ 自己也会周期消耗道具，只有留下「使用前后 / 上课期间」的原始回包，
+     * 才能离线比对出剩余数量字段（字段语义未确认前不做猜测解析）。
+     */
+    private suspend fun probeItemInventory(reason: String) {
+        val (code, raw) = PetCareTask.queryItemInventoryAwait(bridge)
+        RuntimeDiagnostics.event(
+            "item_inventory", "reason" to reason, "code" to code, "len" to (raw?.size ?: 0)
+        )
     }
 
     private fun checkStealthWindows(context: Context): Long? =
