@@ -86,8 +86,10 @@ object OidbSniffer {
     private fun trim(file: File) {
         val keepBytes = (MAX_TRACE_BYTES / 2).toInt()
         val all = file.readBytes()
-        var start = (all.size - keepBytes).coerceAtLeast(0)
+        val tailStart = (all.size - keepBytes).coerceAtLeast(0)
+        var start = tailStart
         while (start < all.size && all[start] != '\n'.code.toByte()) start++
+        if (start >= all.size) start = tailStart
         file.writeBytes(all.copyOfRange(start, all.size))
     }
 
