@@ -41,6 +41,13 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
         @Volatile
         var pendingSettlementStoryId: String? = null
 
+        /** 学园课程 story 形如 6100_<uuid>，与 PetStudyTask.startSchoolAwait 的 page=6100 对应。 */
+        private const val STUDY_STORY_PREFIX = "6100_"
+
+        /** 已消耗学习道具的 story，保证一条课程只用一个。 */
+        @Volatile
+        var itemUsedStoryId: String? = null
+
         private val transactionSequence = AtomicLong()
         private val cycleSequence = AtomicLong()
         private val loopSequence = AtomicLong()
@@ -569,6 +576,7 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
             performMaintenance(context, petId, story, forceCareCheck = justSettled)
             val rem = story.remaining ?: 0L
             if (story.isOngoing && hiredDecision?.hasRecalled != true) {
+                maybeUseStudyItem(story.storyId)
                 val kind = currentTaskTypeName.ifEmpty { "外出" }
                 val outingSleep = if (hiredDecision != null && hiredDecision.nextSleepMillis > 0L) {
                     hiredDecision.nextSleepMillis
@@ -605,6 +613,22 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
                 "task_end_ms" to currentTaskEndTimeMillis
             )
             currentCycleId = 0L
+        }
+    }
+
+    /**
+     * 学习道具按「一条 story 一个」使用：模块自己报名的课在报名成功那一刻用掉，手动在游戏里
+     * 上课、或模块处于疲劳避让期时在这里补齐；同一条 story 只用一次，避免每轮巡检重复消耗。
+     */
+    private suspend fun maybeUseStudyItem(storyId: String?) {
+        if (!prefAutoUseStudyItem || storyId == null || !storyId.startsWith(STUDY_STORY_PREFIX)) return
+        if (storyId == itemUsedStoryId) return
+        val (code, err) = PetCareTask.useStudyItemAwait(bridge)
+        if (code == 0) {
+            itemUsedStoryId = storyId
+            sendLog("[学习道具] 上课期间使用一个学习道具 (StoryID=$storyId)")
+        } else {
+            sendLog(EngineLog.Level.WARN, "[学习道具] 使用未成功 (code=$code, err=${err ?: "无"})，下轮再试")
         }
     }
 

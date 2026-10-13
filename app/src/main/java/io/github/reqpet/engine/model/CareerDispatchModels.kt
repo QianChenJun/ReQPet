@@ -13,8 +13,7 @@ data class StudyDispatchParam(
     val enableFatigueToAdventure: Boolean = true,
     val studyAttributeCursor: Int = 0,
     val learnedStudySubEvent: Long? = null,
-    val learnedStudyName: String? = null,
-    val autoUseStudyItem: Boolean = false
+    val learnedStudyName: String? = null
 )
 
 /**
