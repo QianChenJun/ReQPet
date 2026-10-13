@@ -84,6 +84,30 @@ class FaultInjectionAndConsistencyTest {
     }
 
     @Test
+    fun idleServerVerdictInvalidatesGuessedDeadlineSoSettlementStartsImmediately() {
+        val idle = StoryStatusResult(0, null, null, "6400-story", status = 0L)
+        // 派发时按 1800s 时长配置推出的到期点远在未来，服务器已空闲：推测值必须作废。
+        val reconciled = PetStoryHandlers.reconcileIdleTaskEnd(idle, "6400-story", 1_800_000L, now = 100_000L)
+        assertEquals(100_000L, reconciled)
+        PetAdventureEngine.lastActiveStoryId = "6400-story"
+        PetAdventureEngine.currentTaskEndTimeMillis = reconciled
+        assertEquals("6400-story", PetStoryHandlers.resolveSettlementStoryId(idle, now = 100_000L))
+    }
+
+    @Test
+    fun guessedDeadlineIsRetainedWhileServerStillReportsWork() {
+        val running = statusReply(remaining = 120L)
+        assertTrue(running.isOngoing)
+        assertEquals(
+            1_800_000L,
+            PetStoryHandlers.reconcileIdleTaskEnd(running, "6400-story", 1_800_000L, now = 100_000L)
+        )
+        val idle = StoryStatusResult(0, null, null, "6400-story", status = 0L)
+        assertEquals(1_800_000L, PetStoryHandlers.reconcileIdleTaskEnd(idle, null, 1_800_000L, now = 100_000L))
+        assertEquals(99_999L, PetStoryHandlers.reconcileIdleTaskEnd(idle, "6400-story", 99_999L, now = 100_000L))
+    }
+
+    @Test
     fun unstartedOrUnknownStoryDoesNotSettle() {
         for (start in listOf(null, 0L, -1L)) {
             val reply = statusReply(startTimestamp = start)

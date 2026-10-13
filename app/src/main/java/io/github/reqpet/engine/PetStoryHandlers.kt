@@ -100,6 +100,22 @@ internal object PetStoryHandlers {
         return null
     }
 
+    /**
+     * 服务器已确认无进行中的外出时，派发时缓存的到期时间只是时长配置的推测值，
+     * 必须作废为「已到期」，否则结算会被拦到推测点，期间既不结算也不派发。
+     */
+    internal fun reconcileIdleTaskEnd(
+        story: StoryStatusResult,
+        trackedStoryId: String?,
+        taskEndTimeMillis: Long,
+        now: Long = System.currentTimeMillis()
+    ): Long =
+        if (story.isIdle && !trackedStoryId.isNullOrEmpty() && taskEndTimeMillis > now) {
+            now
+        } else {
+            taskEndTimeMillis
+        }
+
     internal fun resolveSettlementStoryId(
         story: StoryStatusResult, now: Long = System.currentTimeMillis()
     ): String? {

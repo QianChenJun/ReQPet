@@ -551,6 +551,19 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
                 performMaintenance(context, petId, story)
                 return 15_000L.also { sleepMs = it; reason = "status_unknown" }
             }
+            // 派发时缓存的到期时间来自时长配置推测，可能远大于这条 story 的真实时长。
+            // 服务器已确认无进行中的外出时，该推测值必须让位，否则结算会被拦到推测点，
+            // 期间既不结算也不派发（实测空转 23 分钟）。
+            val reconciledEnd = PetStoryHandlers.reconcileIdleTaskEnd(
+                story, lastActiveStoryId, currentTaskEndTimeMillis
+            )
+            if (reconciledEnd != currentTaskEndTimeMillis) {
+                sendLog(
+                    EngineLog.Level.WARN,
+                    "[状态校核] 服务器已确认无进行中的外出，丢弃未复核的本地到期时间，立即进入结算"
+                )
+                currentTaskEndTimeMillis = reconciledEnd
+            }
             val hiredDecision = handleOngoingStory(context, petId, story)
             val justSettled = hiredDecision?.settled == true || handleStorySettlement(context, petId, story)
             performMaintenance(context, petId, story, forceCareCheck = justSettled)
