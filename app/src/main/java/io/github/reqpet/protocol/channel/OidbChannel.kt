@@ -541,6 +541,7 @@ open class OidbChannel(
                     val data = args.getOrNull(1) as? ByteArray
                     val bundle = args.getOrNull(2) as? android.os.Bundle
                     val errorMsg = bundle?.getString("data_error_msg") ?: bundle?.getString("error_msg")
+                    OidbSniffer.recordModuleResponse(commandName, command, subCommand, code, data)
                     invokeCallback(attempt, callback, code, data, errorMsg, "response", responseAtMs)
                 }
                 null

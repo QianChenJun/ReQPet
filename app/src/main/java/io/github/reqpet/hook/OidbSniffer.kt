@@ -82,6 +82,26 @@ object OidbSniffer {
         }
     }
 
+    /** 模块自发包的回包同样绕过 hook；缺了它就看不出 code!=0 时服务端到底回了什么。 */
+    fun recordModuleResponse(
+        commandName: String,
+        command: Int,
+        subCommand: Int,
+        code: Int,
+        data: ByteArray?
+    ) {
+        if (!isEnabled) return
+        try {
+            val hex = data?.let { bytesToHex(it.take(MAX_BODY_DUMP / 2)) } ?: ""
+            trace(
+                "[oidb-own-resp] cmd=$commandName ($command/$subCommand) code=$code " +
+                    "len=${data?.size ?: 0} body=$hex"
+            )
+        } catch (t: Throwable) {
+            if (t is kotlinx.coroutines.CancellationException) throw t
+        }
+    }
+
     /** 超过上限时保留尾部而不是整份删除：隔夜要查的领取记录不能因为文件写满而消失。 */
     private fun trim(file: File) {
         val keepBytes = (MAX_TRACE_BYTES / 2).toInt()
