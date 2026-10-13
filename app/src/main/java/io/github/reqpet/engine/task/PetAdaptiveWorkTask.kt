@@ -2,6 +2,8 @@ package io.github.reqpet.engine.task
 
 import android.content.Context
 import io.github.reqpet.engine.EngineLog
+import io.github.reqpet.engine.PetAdventureEngine
+import io.github.reqpet.engine.PetPreloader
 import io.github.reqpet.engine.TaskLogger
 import io.github.reqpet.engine.model.StoryStatusResult
 import io.github.reqpet.engine.model.WorkDispatchParam
@@ -23,7 +25,15 @@ object PetAdaptiveWorkTask {
         param: WorkDispatchParam,
         onLog: TaskLogger
     ): WorkDispatchResult {
-        val (targetCareerType, placeName) = resolveCareerTypeAndPlace(param)
+        var places = PetAdventureEngine.cachedWorkPlaces ?: param.cachedWorkPlaces
+        if (places == null && param.customWorkType <= 0) {
+            // 设置页原先是唯一同步入口，进程重启后缓存必然为空。缺它就自己补一次，
+            // 否则打工永远停在「还没有场所缓存，本次不猜测星尘魔法塔」。
+            onLog("[打工调度] 场所缓存为空，先自动同步一次小镇解锁状态...")
+            PetPreloader.preloadAccountDataAwait(bridge, petId)
+            places = PetAdventureEngine.cachedWorkPlaces
+        }
+        val (targetCareerType, placeName) = resolveCareerTypeAndPlace(param, places)
         onLog("[动态求职] 锁定场所: $placeName (Career=$targetCareerType，工时设置=${param.customWorkDuration})")
         onLog("[动态求职] 先确认小宠是否已在外出...")
         val (story, ongoing) = describeOngoingOuting(bridge, petId, onLog)
@@ -40,7 +50,7 @@ object PetAdaptiveWorkTask {
             return WorkDispatchResult(code = CODE_ALREADY_OUT, errorMsg = ongoing, placeName = placeName)
         }
 
-        if (param.customWorkType <= 0 && param.cachedWorkPlaces == null) {
+        if (param.customWorkType <= 0 && places == null) {
             onLog.warn("[打工调度] 还没有场所缓存，本次不猜测星尘魔法塔，请先打开一次设置页同步解锁状态")
             return WorkDispatchResult(code = -4, errorMsg = "场所缓存为空", placeName = placeName)
         }
@@ -120,12 +130,15 @@ object PetAdaptiveWorkTask {
         }
     }
 
-    private fun resolveCareerTypeAndPlace(param: WorkDispatchParam): Pair<Int, String> {
+    private fun resolveCareerTypeAndPlace(
+        param: WorkDispatchParam,
+        places: QQPetDirectBridge.SecondMapDetails?
+    ): Pair<Int, String> {
         if (param.customWorkType > 0) {
-            val matched = param.cachedWorkPlaces?.stages?.find { it.stage == param.customWorkType }
+            val matched = places?.stages?.find { it.stage == param.customWorkType }
             return Pair(param.customWorkType, matched?.title ?: "小镇场所#${param.customWorkType}")
         }
-        val unlockedCareers = param.cachedWorkPlaces?.stages?.filter { it.limitStatus == 0 }
+        val unlockedCareers = places?.stages?.filter { it.limitStatus == 0 }
         if (!unlockedCareers.isNullOrEmpty()) {
             val starTower = unlockedCareers.find { it.stage == 3 }
             if (starTower != null) return Pair(3, starTower.title)
