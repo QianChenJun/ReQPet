@@ -388,10 +388,14 @@ class PetCareProtocolClient(
                 total = (ProtoWire.firstVarint(data, 2) ?: 0L).toInt()
                 val itemNodes = ProtoWire.allBytes(data, 4)
                 for (node in itemNodes) {
-                    val name = ProtoWire.firstString(node, 1) ?: "爱心饼干"
+                    // 字段实测：f2=可喂数量、f3=食物名、f4=占位序号、f5/f7=图标、f6=食物 ID、f8=单次体力。
+                    // 早先误把 f4 当食物 ID，库存里拿到的是 "1" 这种占位值，喂食与补货都拿错对象。
+                    val name = ProtoWire.firstString(node, 3)
+                        ?: ProtoWire.firstString(node, 1)
+                        ?: "爱心饼干"
                     val balance = (ProtoWire.firstVarint(node, 2) ?: 0L).toInt()
-                    val itemId = ProtoWire.firstString(node, 4) ?: ""
-                    val energyVal = (ProtoWire.firstVarint(node, 7) ?: 20L).toInt()
+                    val itemId = ProtoWire.firstString(node, 6) ?: ""
+                    val energyVal = (ProtoWire.firstVarint(node, 8) ?: 20L).toInt()
                     if (itemId.isNotEmpty()) {
                         items.add(FoodInventoryItem(itemId, name, balance, if (energyVal > 0) energyVal else 20))
                     }

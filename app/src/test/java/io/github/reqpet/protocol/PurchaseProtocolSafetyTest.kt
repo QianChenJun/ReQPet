@@ -35,7 +35,12 @@ class PurchaseProtocolSafetyTest {
                     callback(inventoryCode, if (inventoryPresent) ProtoWire.message().writeBytes(1, root).toByteArray() else null, null)
                 }
                 39241 -> {
-                    val entry = ProtoWire.message().writeString(4, "9990032").writeVarint(2, balance).toByteArray()
+                    // 与真机 0x9949_1 回包字段一致：f2=数量、f3=食物名、f6=食物 ID。
+                    val entry = ProtoWire.message()
+                        .writeVarint(2, balance)
+                        .writeString(3, "饼干")
+                        .writeString(6, "9990032")
+                        .toByteArray()
                     callback(inventoryCode, if (inventoryPresent) ProtoWire.message().writeBytes(4, entry).toByteArray() else null, null)
                 }
                 39888 -> {

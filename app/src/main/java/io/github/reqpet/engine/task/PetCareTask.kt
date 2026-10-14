@@ -18,6 +18,11 @@ object PetCareTask {
     private const val ENERGY_PER_FEED = io.github.reqpet.engine.utils.PetPureCalculations.ENERGY_PER_FEED
     private const val MAX_FEED_ROUNDS = io.github.reqpet.engine.utils.PetPureCalculations.MAX_FEED_ROUNDS_PER_SESSION
 
+    /** 服务端在背包没有可喂饼干时返回的拒绝码（采购后需等待入账才可喂食）。 */
+    private const val FEED_INSUFFICIENT_CODE = 1000210
+    private const val FEED_RETRY_DELAY_MS = 15_000L
+    private const val MAX_FEED_RETRY_AFTER_BUY = 3
+
     suspend fun queryFeedTimesAwait(
         bridge: QQPetDirectBridge,
         timeoutMs: Long = NETWORK_TIMEOUT_MS
@@ -422,21 +427,27 @@ object PetCareTask {
         petId: String,
         onLog: TaskLogger
     ): Pair<Int, String?> {
-        val (fCode, _) = feedAwait(bridge, petId)
-        if (fCode == 1000210) {
-            onLog("[自动采购] 背包饼干不足 (code=1000210)，立即自动采购 5 份爱心饼干...")
-            val (buyCode, buyErr) = buyFoodAwait(bridge, petId, 5L)
-            if (buyCode == 0) {
-                onLog("[自动采购] 5 份爱心饼干采购入库成功！继续为小宠喂食...")
-                delay(randomJitter(300L, 700L))
-                val (retryCode, _) = feedAwait(bridge, petId)
-                return Pair(retryCode, if (retryCode == 0) null else "重试喂食回包 code=$retryCode")
-            } else {
-                onLog.error("[自动采购] 采购爱心饼干失败: code=$buyCode, 说明: ${buyErr ?: "金币不足或网络异常"}")
-                return Pair(buyCode, buyErr)
-            }
+        var feedCode = feedAwait(bridge, petId).first
+        if (feedCode != FEED_INSUFFICIENT_CODE) {
+            return Pair(feedCode, if (feedCode == 0) null else "喂食回包 code=$feedCode")
         }
-        return Pair(fCode, if (fCode == 0) null else "喂食回包 code=$fCode")
+        onLog("[自动采购] 背包饼干不足 (code=$FEED_INSUFFICIENT_CODE)，立即自动采购 5 份爱心饼干...")
+        val (buyCode, buyErr) = buyFoodAwait(bridge, petId, 5L)
+        if (buyCode != 0) {
+            onLog.error("[自动采购] 采购爱心饼干失败: code=$buyCode, 说明: ${buyErr ?: "金币不足或网络异常"}")
+            return Pair(buyCode, buyErr)
+        }
+        onLog("[自动采购] 5 份爱心饼干采购入库成功！等待服务端入账后重试喂食...")
+        // 实测采购成功后 0.5 秒内重试仍回 1000210：入库到可喂食之间有服务端延迟，
+        // 需要留出真实等待窗口，否则一次过快的重试就把整轮照料判失败并退避。
+        repeat(MAX_FEED_RETRY_AFTER_BUY) { attempt ->
+            delay(FEED_RETRY_DELAY_MS)
+            feedCode = feedAwait(bridge, petId).first
+            if (feedCode == 0) return Pair(0, null)
+            if (feedCode != FEED_INSUFFICIENT_CODE) return Pair(feedCode, "喂食回包 code=$feedCode")
+            onLog("[自动采购] 第 ${attempt + 1} 次重试仍回 code=$FEED_INSUFFICIENT_CODE")
+        }
+        return Pair(feedCode, "采购后重试喂食仍回 code=$feedCode")
     }
 
     suspend fun bathWithAutoBuyAwait(

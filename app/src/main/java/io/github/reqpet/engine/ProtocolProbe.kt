@@ -29,7 +29,9 @@ internal object ProtocolProbe {
 
     /** 只盯与调度决策直接相关的命令，避免高频只读轮询灌满磁盘。 */
     private val watched = listOf(
-        "0x975e", "0x975f", "0x9760", "0x9ab2", "0x9949", "0x994b", "0x975a", "0x994c", "0x9bb1"
+        "0x975e", "0x975f", "0x9760", "0x9ab2", "0x9949", "0x994b", "0x975a", "0x994c", "0x9bb1",
+        // 0x992d 喂食恒被 1000210 拒；0x99df 采购、0x9bf2/0x9bf3 洗护同类，一起留证。
+        "0x992d", "0x99df", "0x9bf2", "0x9bf3"
     )
 
     private val stampFormat = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss.SSS")
