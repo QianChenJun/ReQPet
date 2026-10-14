@@ -191,6 +191,20 @@ object PetMaintenanceCoordinator {
                     careFailed = true
                 }
             }
+            if (careFailed && !PetAdventureEngine.enableOneClickCare) {
+                val latestAttrs = PetCareTask.queryPetAttributesAwait(bridge, petId)
+                if (latestAttrs != null && latestAttrs.energy.isFinite() && latestAttrs.clean.isFinite()) {
+                    PetAdventureEngine.sendLog("[自理] 逐步护理受限，切换一键呵护协议重试")
+                    val oneClickRes = PetCareTask.executeOneClickCareWithAutoBuyAwait(
+                        bridge,
+                        petId,
+                        latestAttrs
+                    ) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
+                    if (oneClickRes.code == 1 || oneClickRes.code == 2) {
+                        careFailed = false
+                    }
+                }
+            }
             success = !careFailed
         } finally {
             if (generation == PetAdventureEngine.sessionGeneration) {
