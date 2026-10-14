@@ -6,15 +6,15 @@ import io.github.reqpet.protocol.QQPetDirectBridge
  * 事件目录（课程、岗位）的档位比价。
  *
  * 服务端在下发目录时就已经把降效后的数字算好了：当日额度用满后，被削的档位收益直接缩小
- * （实测 4 小时档 1108 变 831，学园 1 小时档 35 变 9），所以按「每小时收益」排序即可，
- * 不需要猜服务端的额度门槛。同一方向的可做档位全部降效时返回 null，由调用方按用户配置
- * 转去冒险，而不是硬报一个被削到 25% 的档位。
+ * （实测 4 小时档 1108 变 831，学园 1 小时档 35 变 9）。学习按属性/小时比价，
+ * 自动打工则按收益/体力比价，避免只看小时收益而把体力很快耗空。
  */
 internal object CatalogPicker {
 
     private val MARKDOWN_IMAGE = Regex("!\\[[^\\]]*\\]\\([^)]*\\)")
     private val MARKDOWN_LINK = Regex("\\[[^\\]]*\\]\\([^)]*\\)")
     private val NUMBER = Regex("\\d+")
+    private val ENERGY_COST = Regex("体力\\s*(\\d+)")
 
     fun parseDurationMinutes(costTime: String): Int? {
         val text = costTime.trim()
@@ -36,11 +36,19 @@ internal object CatalogPicker {
         return NUMBER.findAll(stripped).lastOrNull()?.value?.toIntOrNull()
     }
 
+    fun parseEnergyCost(cost: String): Int? = ENERGY_COST.find(cost)?.groupValues?.getOrNull(1)?.toIntOrNull()
+
     fun ratePerHour(event: QQPetDirectBridge.SelectEvent): Double? {
         val minutes = parseDurationMinutes(event.costTime) ?: return null
         if (minutes <= 0) return null
         val value = parseRewardValue(event.reward) ?: return null
         return value * 60.0 / minutes
+    }
+
+    fun ratePerEnergy(event: QQPetDirectBridge.SelectEvent): Double? {
+        val energy = parseEnergyCost(event.cost)?.takeIf { it > 0 } ?: return null
+        val value = parseRewardValue(event.reward) ?: return null
+        return value.toDouble() / energy
     }
 
     /**
@@ -52,10 +60,23 @@ internal object CatalogPicker {
         events: List<QQPetDirectBridge.SelectEvent>,
         cursor: Int = 0,
         includeFatigued: Boolean = false
+    ): QQPetDirectBridge.SelectEvent? = pickBest(events, cursor, includeFatigued, ::ratePerHour)
+
+    /** 自动打工的长期收益口径：优先选择单位体力带来的收益。 */
+    fun pickBestResourceRate(
+        events: List<QQPetDirectBridge.SelectEvent>,
+        cursor: Int = 0,
+        includeFatigued: Boolean = false
+    ): QQPetDirectBridge.SelectEvent? = pickBest(events, cursor, includeFatigued, ::ratePerEnergy)
+
+    private fun pickBest(
+        events: List<QQPetDirectBridge.SelectEvent>,
+        cursor: Int,
+        includeFatigued: Boolean,
+        scorer: (QQPetDirectBridge.SelectEvent) -> Double?
     ): QQPetDirectBridge.SelectEvent? {
         val scored = events.filter { includeFatigued || !it.isFatigued }.mapNotNull { event ->
-            val rate = ratePerHour(event) ?: return@mapNotNull null
-            event to rate
+            scorer(event)?.let { event to it }
         }
         if (scored.isEmpty()) return null
         val top = scored.maxOf { it.second }

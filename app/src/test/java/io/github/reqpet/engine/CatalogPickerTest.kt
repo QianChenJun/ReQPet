@@ -17,12 +17,14 @@ class CatalogPickerTest {
         name: String,
         costTime: String,
         reward: String,
+        cost: String = "",
         fatigued: Boolean = false,
         canDo: Boolean = true
     ) = QQPetDirectBridge.SelectEvent(
         eventName = name,
         subEventType = 1L,
         canDo = canDo,
+        cost = cost,
         costTime = costTime,
         reward = reward,
         isFatigued = fatigued
@@ -36,6 +38,13 @@ class CatalogPickerTest {
         assertEquals(240, CatalogPicker.parseDurationMinutes("4小时"))
         assertNull(CatalogPicker.parseDurationMinutes("不限"))
         assertNull(CatalogPicker.parseDurationMinutes(""))
+    }
+
+    @Test
+    fun energyCostParsesFromWorkCost() {
+        assertEquals(5, CatalogPicker.parseEnergyCost("体力5(当前65)，清洁2(当前65)"))
+        assertEquals(40, CatalogPicker.parseEnergyCost("体力40(当前100)，清洁16(当前100)"))
+        assertNull(CatalogPicker.parseEnergyCost("金币+18"))
     }
 
     @Test
@@ -64,6 +73,19 @@ class CatalogPickerTest {
             )
         )
         assertEquals("4小时工", picked?.eventName)
+    }
+
+    @Test
+    fun automaticWorkSelectionPrefersRewardPerEnergy() {
+        val picked = CatalogPicker.pickBestResourceRate(
+            listOf(
+                event("10分钟工", "10分钟", "18", cost = "体力5(当前100)"),
+                event("45分钟工", "45分钟", "72", cost = "体力10(当前100)"),
+                event("2小时工", "2小时", "171", cost = "体力25(当前100)"),
+                event("4小时工", "4小时", "264", cost = "体力40(当前100)")
+            )
+        )
+        assertEquals("45分钟工", picked?.eventName)
     }
 
     @Test

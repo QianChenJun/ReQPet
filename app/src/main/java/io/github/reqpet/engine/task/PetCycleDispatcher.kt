@@ -395,9 +395,8 @@ object PetCycleDispatcher {
         }
         if (res.isFatigued && PetAdventureEngine.enableFatigueToAdventure) {
             PetAdventureEngine.sendLog(
-                "[疲惫避让] 学园课程标记为疲惫 (${res.fatigueTip ?: "收益降低"})，智能避让转入森林探险..."
+                "[疲惫避让] 学园课程标记为疲惫 (${res.fatigueTip ?: "收益降低"})，交给外层调度尝试打工或冒险"
             )
-            return PetAdventureDispatch.dispatchAdventure(context, bridge, petId)
         }
         PetAdventureEngine.sendLog(
             EngineLog.Level.WARN,
@@ -479,9 +478,8 @@ object PetCycleDispatcher {
         }
         if (res.isFatigued && PetAdventureEngine.enableFatigueToAdventure) {
             PetAdventureEngine.sendLog(
-                "[疲惫避让] 打工岗位标记为疲惫 (${res.fatigueTip ?: "收益降低"})，智能避让转入森林探险..."
+                "[疲惫避让] 打工岗位标记为疲惫 (${res.fatigueTip ?: "收益降低"})，交给外层调度尝试学习或冒险"
             )
-            return PetAdventureDispatch.dispatchAdventure(context, bridge, petId)
         }
         if (res.code == PetAdaptiveWorkTask.CODE_ALREADY_OUT || PetPureCalculations.isPetAlreadyOutError(
                 res.code,

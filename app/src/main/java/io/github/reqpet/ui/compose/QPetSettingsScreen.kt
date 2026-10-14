@@ -301,9 +301,10 @@ private fun CategoryRow(page: SettingsPage, summary: String, onSelect: (Settings
 
 @Composable
 private fun taskSummary(state: SettingsState): String {
-    val study = state.bool(PreferencesHelper.KEY_STUDY, false)
-    val work = state.bool(PreferencesHelper.KEY_WORK, false)
-    val adventure = state.bool(PreferencesHelper.KEY_ADVENTURE, false)
+    val automaticTasks = state.bool(PreferencesHelper.KEY_MASTER_ENABLED, false)
+    val study = state.bool(PreferencesHelper.KEY_STUDY, automaticTasks)
+    val work = state.bool(PreferencesHelper.KEY_WORK, automaticTasks)
+    val adventure = state.bool(PreferencesHelper.KEY_ADVENTURE, automaticTasks)
     return remember(study, work, adventure) {
         val enabled = buildList {
             if (study) add("学习")

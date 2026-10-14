@@ -53,9 +53,10 @@ fun CareerSection(state: SettingsState) {
     val scope = rememberCoroutineScope()
     var showHireWhitelist by remember { mutableStateOf(false) }
 
-    val studyEnabled = state.bool(PreferencesHelper.KEY_STUDY, false)
-    val workEnabled = state.bool(PreferencesHelper.KEY_WORK, false)
-    val adventureEnabled = state.bool(PreferencesHelper.KEY_ADVENTURE, false)
+    val automaticTasks = state.bool(PreferencesHelper.KEY_MASTER_ENABLED, false)
+    val studyEnabled = state.bool(PreferencesHelper.KEY_STUDY, automaticTasks)
+    val workEnabled = state.bool(PreferencesHelper.KEY_WORK, automaticTasks)
+    val adventureEnabled = state.bool(PreferencesHelper.KEY_ADVENTURE, automaticTasks)
     val hasAnyTask = studyEnabled || workEnabled || adventureEnabled
     val schoolDetails = state.schoolDetails
     val workPlaces = state.workPlaces
@@ -140,7 +141,7 @@ fun CareerSection(state: SettingsState) {
         item {
             ToggleRow(
                 title = "疲惫时自动转冒险",
-                checked = state.bool(PreferencesHelper.KEY_FATIGUE_TO_ADVENTURE, false),
+                checked = state.bool(PreferencesHelper.KEY_FATIGUE_TO_ADVENTURE, automaticTasks),
                 onCheckedChange = { state.setBool(PreferencesHelper.KEY_FATIGUE_TO_ADVENTURE, it) },
                 subtitle = "检测到疲惫收益减少时，取消打工和学习转去冒险直至恢复"
             )
@@ -234,7 +235,7 @@ private fun WorkPanel(
                 modifier = Modifier.padding(vertical = 4.dp)
             )
             Text(
-                text = "智能挂机按服务端实时奖励/小时比价，不等于工分总量最优；想冲工分请选择 45 分钟。开启疲惫转冒险后，服务端降效时会暂停学习和打工，次日恢复。",
+                text = "智能挂机按收益/体力自动选档，当前目录通常会选 45 分钟；系统会自动轮换学习与打工，两个方向都降效后才转冒险。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)

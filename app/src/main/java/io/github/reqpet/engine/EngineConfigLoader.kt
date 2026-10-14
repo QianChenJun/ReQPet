@@ -18,19 +18,20 @@ internal object EngineConfigLoader {
             val p = context.getSharedPreferences("qqpet_inproc_prefs", Context.MODE_PRIVATE)
             PetAdventureEngine.masterEnabled = p.getBoolean(PreferencesHelper.KEY_MASTER_ENABLED, false)
             RuntimeSwitches.masterEnabled = PetAdventureEngine.masterEnabled
-            PetAdventureEngine.enableStudy = p.getBoolean("key_study", false)
-            PetAdventureEngine.enableWork = p.getBoolean("key_work", false)
+            val automaticTasks = PetAdventureEngine.masterEnabled
+            PetAdventureEngine.enableStudy = p.getBoolean("key_study", automaticTasks)
+            PetAdventureEngine.enableWork = p.getBoolean("key_work", automaticTasks)
             val rawOneClickCare = p.getBoolean(PreferencesHelper.KEY_ONE_CLICK_CARE, false)
             PetAdventureEngine.enableOneClickCare = rawOneClickCare
             PetAdventureEngine.enableCare = !rawOneClickCare && p.getBoolean("key_care", false)
-            PetAdventureEngine.enableAdventure = p.getBoolean("key_adventure", false)
+            PetAdventureEngine.enableAdventure = p.getBoolean("key_adventure", automaticTasks)
             val hasAnyTask =
                 PetAdventureEngine.enableStudy || PetAdventureEngine.enableWork || PetAdventureEngine.enableAdventure
             PetAdventureEngine.enableSettle = p.getBoolean("key_settle", true) || hasAnyTask
             PetAdventureEngine.enableLikeBack = p.getBoolean(PreferencesHelper.KEY_LIKE_BACK, false)
             PetAdventureEngine.enableClaimCoinBag = p.getBoolean(PreferencesHelper.KEY_CLAIM_COINBAG, false)
             PetAdventureEngine.enableFatigueToAdventure =
-                p.getBoolean(PreferencesHelper.KEY_FATIGUE_TO_ADVENTURE, false)
+                p.getBoolean(PreferencesHelper.KEY_FATIGUE_TO_ADVENTURE, automaticTasks)
             PetAdventureEngine.enableAutoPk = p.getBoolean(PreferencesHelper.KEY_AUTO_PK, false)
             PetAdventureEngine.prefHiredRecallProgress = p.getInt(PreferencesHelper.KEY_HIRED_RECALL_PROGRESS, 72)
             PetAdventureEngine.prefNightSleepMode = p.getBoolean(PreferencesHelper.KEY_NIGHT_SLEEP_MODE, true)

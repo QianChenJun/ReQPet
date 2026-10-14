@@ -157,7 +157,7 @@ object PetAdaptiveWorkTask {
     }
 
     /**
-     * 选岗位：先按用户设定的工时档收敛，再在未降效的档位里比每小时工分。
+     * 选岗位：先按用户设定的工时档收敛；自动模式按收益/体力比价，手动时长仍按收益/小时比价。
      * 所设工时档被降效时放宽到全部档位。
      * 全部降效时只有「转冒险」真的走得通（[adventureAvailable]）才返回 null 交给调用方避让，
      * 否则拿最优的降效档继续上岗，避免额度用满加探险冷却时一分钱都不挣。
@@ -179,18 +179,42 @@ object PetAdaptiveWorkTask {
         val stages = listOf("工时档" to durationFiltered.ifEmpty { available }, "放宽工时" to available)
         for ((stageName, candidates) in stages) {
             val ranking = CatalogPicker.describeRanking(candidates)
-            val picked = CatalogPicker.pickBestRate(candidates, param.workJobCursor)
+            val autoDuration = param.customWorkDuration == 0
+            val picked = pickJob(
+                candidates,
+                param.workJobCursor,
+                customDuration = param.customWorkDuration,
+                includeFatigued = false
+            )
             if (picked != null) {
-                return picked to "$stageName 选中 ${picked.eventName}｜$ranking"
+                val basis = if (autoDuration) "收益/体力" else "收益/小时"
+                return picked to "$stageName 按${basis}选中 ${picked.eventName}｜$ranking"
             }
         }
         val ranking = CatalogPicker.describeRanking(available)
         if (param.enableFatigueToAdventure && adventureAvailable) {
             return null to "可做档位全部降效，转探险｜$ranking"
         }
-        val fallback = CatalogPicker.pickBestRate(available, param.workJobCursor, includeFatigued = true)
+        val fallback = pickJob(
+            available,
+            param.workJobCursor,
+            customDuration = param.customWorkDuration,
+            includeFatigued = true
+        )
             ?: return null to "可做档位全部降效且无一档收益可解析｜$ranking"
         return fallback to "全档降效，无其它可用方向，按最优档继续 ${fallback.eventName}｜$ranking"
+    }
+
+    private fun pickJob(
+        jobs: List<QQPetDirectBridge.SelectEvent>,
+        cursor: Int,
+        customDuration: Int,
+        includeFatigued: Boolean
+    ): QQPetDirectBridge.SelectEvent? = if (customDuration == 0) {
+        CatalogPicker.pickBestResourceRate(jobs, cursor, includeFatigued)
+            ?: CatalogPicker.pickBestRate(jobs, cursor, includeFatigued)
+    } else {
+        CatalogPicker.pickBestRate(jobs, cursor, includeFatigued)
     }
 
     private fun durationMatches(costTime: String, minuteMark: String): Boolean {
