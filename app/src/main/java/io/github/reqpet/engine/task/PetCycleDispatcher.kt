@@ -58,12 +58,15 @@ object PetCycleDispatcher {
         }
 
         val attempts = available.size
-        val startCursor = PetAdventureEngine.roundRobinCursor
+        val startCursor = PetAdventureEngine.roundRobinCursor % attempts
         var dispatched = false
         for (i in 0 until attempts) {
-            val target = available[PetAdventureEngine.roundRobinCursor % available.size]
-            PetAdventureEngine.roundRobinCursor = (PetAdventureEngine.roundRobinCursor + 1) % available.size
+            // 先按轮转位次，失败再顺延试其它方向；轮转位次只在成功后推进，
+            // 否则某个方向每失败一次都会把位次多带一格，长期下来学习与打工的份额就不均了。
+            val index = (startCursor + i) % attempts
+            val target = available[index]
             if (executeAction(context, bridge, petId, target, announce = false)) {
+                PetAdventureEngine.roundRobinCursor = (index + 1) % attempts
                 dispatched = true
                 break
             }

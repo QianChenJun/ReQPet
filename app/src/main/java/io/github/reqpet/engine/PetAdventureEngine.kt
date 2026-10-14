@@ -63,7 +63,9 @@ private const val PREFS_NAME = "qqpet_inproc_prefs"
         var adventureRefusedUntilMillis: Long = 0L
 
         const val ADVENTURE_REFUSED_CODE = 135051
-        const val ADVENTURE_REFUSED_COOLDOWN_MS = 30 * 60 * 1000L
+        // 30 分钟的冷却会把「学习与打工全档降效」的日子彻底拖成空转，改为 5 分钟：
+        // 拒绝是暂时性的，短冷却既省包又能及时恢复探险。
+        const val ADVENTURE_REFUSED_COOLDOWN_MS = 5 * 60 * 1000L
 
         /** 只对 135051 冷却，其它错误（网络抖动、超时）不占用冷却窗口。 */
         fun markAdventureRefused(code: Int): Boolean {
@@ -78,6 +80,12 @@ private const val PREFS_NAME = "qqpet_inproc_prefs"
             val left = adventureRefusedUntilMillis - System.currentTimeMillis()
             return if (left <= 0L) 0L else (left + 999L) / 1000L
         }
+
+        /**
+         * 探险此刻是否真的能顶上：开关打开且不在 135051 冷却里。
+         * 学习与打工的选档靠它判断「全档降效时还有没有别的出路」，有出路才避让。
+         */
+        fun isAdventureDispatchable(): Boolean = enableAdventure && adventureCooldownRemainingSeconds() <= 0L
 
         /** 每日礼包领取状态，按账号记 "日期|已试次数|done"；每天最多试 3 次。 */
         private const val GIFT_CLAIM_STATE_KEY = "key_gift_claim_state"

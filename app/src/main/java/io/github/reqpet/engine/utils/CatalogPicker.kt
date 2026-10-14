@@ -45,9 +45,15 @@ internal object CatalogPicker {
 
     /**
      * 在未降效的档位里挑每小时收益最高的一档；收益并列时按 cursor 轮换，避免永远只报同一门课。
+     * [includeFatigued] 只在「全档降效且没有别的方向可去」时打开：宁可拿 25% 的降效档继续干，
+     * 也不要让宠物整段时间什么都不做。
      */
-    fun pickBestRate(events: List<QQPetDirectBridge.SelectEvent>, cursor: Int = 0): QQPetDirectBridge.SelectEvent? {
-        val scored = events.filter { !it.isFatigued }.mapNotNull { event ->
+    fun pickBestRate(
+        events: List<QQPetDirectBridge.SelectEvent>,
+        cursor: Int = 0,
+        includeFatigued: Boolean = false
+    ): QQPetDirectBridge.SelectEvent? {
+        val scored = events.filter { includeFatigued || !it.isFatigued }.mapNotNull { event ->
             val rate = ratePerHour(event) ?: return@mapNotNull null
             event to rate
         }

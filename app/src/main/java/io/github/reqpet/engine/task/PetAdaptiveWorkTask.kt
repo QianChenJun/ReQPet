@@ -64,18 +64,19 @@ object PetAdaptiveWorkTask {
             return WorkDispatchResult(code = evtCode, errorMsg = "岗位查询失败", placeName = placeName)
         }
         onLog("[岗位拉取] 服务端返回 ${dynamicJobs.size} 个打工岗位")
-        val (targetJob, pickReason) = selectJob(dynamicJobs, param)
+        val adventureAvailable = PetAdventureEngine.isAdventureDispatchable()
+        val (targetJob, pickReason) = selectJob(dynamicJobs, param, adventureAvailable)
         onLog("[岗位比价] $pickReason")
         if (targetJob == null) {
             val fatigueTip = dynamicJobs.firstOrNull { it.isFatigued }?.eventTips
-            if (param.enableFatigueToAdventure) {
+            if (param.enableFatigueToAdventure && adventureAvailable) {
                 onLog("[疲惫避让] 打工可做档位都已降效，按设置转入森林探险")
                 return WorkDispatchResult(code = -2, isFatigued = true, fatigueTip = fatigueTip, placeName = placeName)
             }
-            onLog.warn("[打工调度] 「$placeName」没有未降效的可做岗位，本次不派遣")
-            return WorkDispatchResult(code = -3, errorMsg = "没有未降效的可做岗位", placeName = placeName)
+            onLog.warn("[打工调度] 「$placeName」没有可报名的岗位，本次不派遣")
+            return WorkDispatchResult(code = -3, errorMsg = "没有可报名的岗位", placeName = placeName)
         }
-        if (param.enableFatigueToAdventure && targetJob.isFatigued) {
+        if (param.enableFatigueToAdventure && adventureAvailable && targetJob.isFatigued) {
             return WorkDispatchResult(code = -2, isFatigued = true, fatigueTip = targetJob.eventTips)
         }
         onLog("[小镇上岗] 锁定岗位: ${targetJob.eventName} (工时:${targetJob.costTime})，发起启程...")
@@ -157,11 +158,14 @@ object PetAdaptiveWorkTask {
 
     /**
      * 选岗位：先按用户设定的工时档收敛，再在未降效的档位里比每小时工分。
-     * 所设工时档被降效时放宽到全部档位，而不是直接放弃打工转冒险；全部降效才交给调用方处理。
+     * 所设工时档被降效时放宽到全部档位。
+     * 全部降效时只有「转冒险」真的走得通（[adventureAvailable]）才返回 null 交给调用方避让，
+     * 否则拿最优的降效档继续上岗，避免额度用满加探险冷却时一分钱都不挣。
      */
     private fun selectJob(
         jobs: List<QQPetDirectBridge.SelectEvent>,
-        param: WorkDispatchParam
+        param: WorkDispatchParam,
+        adventureAvailable: Boolean
     ): Pair<QQPetDirectBridge.SelectEvent?, String> {
         val available = jobs.filter { it.canDo }.ifEmpty { jobs }
         if (available.isEmpty()) return null to "目录为空"
@@ -179,12 +183,14 @@ object PetAdaptiveWorkTask {
             if (picked != null) {
                 return picked to "$stageName 选中 ${picked.eventName}｜$ranking"
             }
-            if (!param.enableFatigueToAdventure) {
-                val fallback = candidates.lastOrNull()
-                if (fallback != null) return fallback to "$stageName 未设避让，仍选 ${fallback.eventName}｜$ranking"
-            }
         }
-        return null to "可做档位全部降效｜${CatalogPicker.describeRanking(available)}"
+        val ranking = CatalogPicker.describeRanking(available)
+        if (param.enableFatigueToAdventure && adventureAvailable) {
+            return null to "可做档位全部降效，转探险｜$ranking"
+        }
+        val fallback = CatalogPicker.pickBestRate(available, param.workJobCursor, includeFatigued = true)
+            ?: return null to "可做档位全部降效且无一档收益可解析｜$ranking"
+        return fallback to "全档降效，无其它可用方向，按最优档继续 ${fallback.eventName}｜$ranking"
     }
 
     private fun durationMatches(costTime: String, minuteMark: String): Boolean {

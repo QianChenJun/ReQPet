@@ -89,6 +89,32 @@ class CatalogPickerTest {
     }
 
     @Test
+    fun includeFatiguedKeepsWorkingWithTwentyFivePercentTiersWhenNothingElseIsLeft() {
+        val picked = CatalogPicker.pickBestRate(
+            listOf(
+                event("4小时工", "4小时", "工分+831", fatigued = true),
+                event("1小时课", "1小时", "智力+9", fatigued = true)
+            ),
+            includeFatigued = true
+        )
+        assertEquals("4小时工", picked?.eventName)
+    }
+
+    @Test
+    fun includeFatiguedCommitsToTheBestRateAmongReducedTiers() {
+        // 只在「同一方向已无未降效档位」时才走这条路，所以这里就是纯比价：
+        // 4 小时档被削到 831 仍是 207.75/h，比 1 小时档被削到 9 强，继续干比空转好。
+        val picked = CatalogPicker.pickBestRate(
+            listOf(
+                event("1小时课", "1小时", "智力+9", fatigued = true),
+                event("4小时工", "4小时", "工分+831", fatigued = true)
+            ),
+            includeFatigued = true
+        )
+        assertEquals("4小时工", picked?.eventName)
+    }
+
+    @Test
     fun equalRatesRotateByCursor() {
         val tiers = listOf(
             event("甲", "20分钟", "智力+14"),

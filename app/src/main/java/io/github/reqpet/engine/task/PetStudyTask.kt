@@ -1,5 +1,6 @@
 package io.github.reqpet.engine.task
 
+import io.github.reqpet.engine.PetAdventureEngine
 import io.github.reqpet.engine.RuntimeDiagnostics
 import io.github.reqpet.engine.TaskLogger
 import io.github.reqpet.engine.model.StudyDispatchParam
@@ -64,7 +65,8 @@ object PetStudyTask {
             return StudyDispatchResult(code = evtCode, errorMsg = "课程查询失败")
         }
         onLog("[课程拉取] 服务端返回 ${dynamicEvents.size} 门课程")
-        val (targetCourse, pickReason) = selectCourse(dynamicEvents, param)
+        val adventureAvailable = PetAdventureEngine.isAdventureDispatchable()
+        val (targetCourse, pickReason) = selectCourse(dynamicEvents, param, adventureAvailable)
         onLog("[选课比价] $pickReason")
         if (targetCourse == null) {
             val fatigueTip = dynamicEvents.firstOrNull { it.isFatigued }?.eventTips
@@ -76,12 +78,12 @@ object PetStudyTask {
                 "cost" to "",
                 "avoid" to param.enableFatigueToAdventure
             )
-            if (param.enableFatigueToAdventure) {
+            if (param.enableFatigueToAdventure && adventureAvailable) {
                 onLog("[疲惫避让] 学园可做档位都已降效，按设置转入森林探险")
                 return StudyDispatchResult(code = -2, isFatigued = true, fatigueTip = fatigueTip)
             }
-            onLog.warn("[学园调度] 阶段 $targetStage 没有未降效的可做档位，本次不报名")
-            return StudyDispatchResult(code = -3, errorMsg = "没有未降效的可做档位")
+            onLog.warn("[学园调度] 阶段 $targetStage 没有可报名的档位，本次不报名")
+            return StudyDispatchResult(code = -3, errorMsg = "没有可报名的档位")
         }
         RuntimeDiagnostics.event(
             "study_course",
@@ -128,12 +130,14 @@ object PetStudyTask {
 
     /**
      * 选课：先按用户设定的科目与时长档收敛，再在未降效的档位里比每小时收益。
-     * 收敛结果全被降效时逐级放宽（先放宽时长、再放宽科目），避免当日额度用满后整天只去冒险；
-     * 放宽后仍没有未降效档位时才交给调用方转冒险。
+     * 收敛结果全被降效时逐级放宽（先放宽时长、再放宽科目）。
+     * 放宽后仍全部降效时，只有「转冒险」真的走得通（[adventureAvailable]）才返回 null 交给调用方避让，
+     * 否则照拿最优的降效档继续上课，避免白天额度用满加探险冷却时整段空转。
      */
     private fun selectCourse(
         events: List<QQPetDirectBridge.SelectEvent>,
-        param: StudyDispatchParam
+        param: StudyDispatchParam,
+        adventureAvailable: Boolean
     ): Pair<QQPetDirectBridge.SelectEvent?, String> {
         val available = events.filter { it.canDo }.ifEmpty { events }
         if (available.isEmpty()) return null to "目录为空"
@@ -160,6 +164,12 @@ object PetStudyTask {
                 return picked to "$stageName 选中 ${picked.eventName}｜$ranking"
             }
         }
-        return null to "可做档位全部降效｜${CatalogPicker.describeRanking(available)}"
+        val ranking = CatalogPicker.describeRanking(available)
+        if (param.enableFatigueToAdventure && adventureAvailable) {
+            return null to "可做档位全部降效，转探险｜$ranking"
+        }
+        val fallback = CatalogPicker.pickBestRate(available, param.studyAttributeCursor, includeFatigued = true)
+            ?: return null to "可做档位全部降效且无一档收益可解析｜$ranking"
+        return fallback to "全档降效，无其它可用方向，按最优档继续 ${fallback.eventName}｜$ranking"
     }
 }
