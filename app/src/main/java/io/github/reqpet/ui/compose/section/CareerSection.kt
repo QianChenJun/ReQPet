@@ -233,6 +233,12 @@ private fun WorkPanel(
                 onSelect = { state.setInt(PreferencesHelper.KEY_WORK_DURATION, it) },
                 modifier = Modifier.padding(vertical = 4.dp)
             )
+            Text(
+                text = "智能挂机按服务端实时奖励/小时比价，不等于工分总量最优；想冲工分请选择 45 分钟。开启疲惫转冒险后，服务端降效时会暂停学习和打工，次日恢复。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp)
+            )
             durationOptions.tips.filterNotNull().forEach { tip ->
                 Text(
                     text = tip,
