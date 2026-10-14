@@ -18,3 +18,5 @@ gradle/gradle-daemon-jvm.properties
 .agents/
 
 tmp/
+
+tools/*.log
