@@ -278,8 +278,8 @@ class PetCareProtocolClient(
                     val first = arr?.firstOrNull()
                     val strVal = first?.javaClass?.getField("a")?.get(first) as? String
                     val fId = strVal?.toLongOrNull()
-                    if (fId != null && fId == DEFAULT_FOOD_ID) {
-                        EngineLog.d(TAG, "从 PetHomeResourceManager 验证官方白名单 foodId: $fId")
+                    if (fId != null && fId > 0L) {
+                        EngineLog.i(TAG, "从 PetHomeResourceManager 解析到动态 foodId: $fId (白名单默认 $DEFAULT_FOOD_ID)")
                         return fId
                     }
                 }
@@ -298,8 +298,10 @@ class PetCareProtocolClient(
         foodItemId: String = "",
         callback: (code: Int, rawData: ByteArray?, errorMsg: String?) -> Unit
     ) {
-        // DEF-16: 食物 ID 严格锁定官方白名单 9990032L
-        val targetFoodId = if (foodId == DEFAULT_FOOD_ID) DEFAULT_FOOD_ID else resolveFoodId()
+        // 优先用调用方显式指定的非默认 id，其次用宿主当前选中的动态 foodId，最后回落官方默认值。
+        // 旧版即为「读宿主动态 id」策略；此前锁定默认值导致宿主换了食物时喂食必被拒 (code=1000210 食物不足)。
+        val targetFoodId = if (foodId > 0L && foodId != DEFAULT_FOOD_ID) foodId else resolveFoodId()
+        EngineLog.i(TAG, "feed: 使用 foodId=$targetFoodId")
         val bodyBytes = tryReflectFeedBody(petId, targetFoodId, petUin)
         if (bodyBytes == null) {
             // 若宿主反射未命中，严禁发送私造畸形字节流，直接执行 Safe-Fail 记录日志并安全退出
