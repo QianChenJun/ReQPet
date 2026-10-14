@@ -208,12 +208,13 @@ object PetCareTask {
         petId: String,
         count: Long = 5L,
         itemType: String = "9990032",
+        serverConfirmedShortage: Boolean = false,
         timeoutMs: Long = NETWORK_TIMEOUT_MS
     ): Pair<Int, String?> =
         try {
             withTimeoutOrNull(timeoutMs) {
                 suspendCancellableCoroutine { cont ->
-                    bridge.buyFood(petId, count, itemType) { code, _, errorMsg ->
+                    bridge.buyFood(petId, count, itemType, serverConfirmedShortage) { code, _, errorMsg ->
                         if (cont.isActive) cont.resume(Pair(code, errorMsg))
                     }
                 }
@@ -432,7 +433,8 @@ object PetCareTask {
             return Pair(feedCode, if (feedCode == 0) null else "喂食回包 code=$feedCode")
         }
         onLog("[自动采购] 背包饼干不足 (code=$FEED_INSUFFICIENT_CODE)，立即自动采购 5 份爱心饼干...")
-        val (buyCode, buyErr) = buyFoodAwait(bridge, petId, 5L)
+        // 服务端已经明确回「食物不足」，这个判定比本地库存解析权威，采购不再受库存读数拦截。
+        val (buyCode, buyErr) = buyFoodAwait(bridge, petId, 5L, serverConfirmedShortage = true)
         if (buyCode != 0) {
             onLog.error("[自动采购] 采购爱心饼干失败: code=$buyCode, 说明: ${buyErr ?: "金币不足或网络异常"}")
             return Pair(buyCode, buyErr)

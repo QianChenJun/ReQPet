@@ -412,8 +412,9 @@ class QQPetDirectBridge(classLoader: ClassLoader, context: Context? = null) {
         petId: String,
         count: Long = 5L,
         itemType: String = "9990032",
+        serverConfirmedShortage: Boolean = false,
         callback: (code: Int, rawData: ByteArray?, errorMsg: String?) -> Unit
-    ) = careClient.buyFood(petId, count, itemType, callback)
+    ) = careClient.buyFood(petId, count, itemType, serverConfirmedShortage, callback)
 
     fun refreshProfile(callback: ((code: Int) -> Unit)? = null) =
         careClient.refreshProfile(callback)

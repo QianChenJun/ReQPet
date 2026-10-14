@@ -45,6 +45,9 @@ class PurchaseGuard(private val store: Store) {
             }
             val saved = store.read(uin)
             if (saved.pendingCount != 0) return@synchronized null to "上次采购结果待确认，暂停补购"
+            // 全物品共享一个冷却窗口（单测 allItemsShareDailyBudgetAndCooldown 固化这条不变量）：
+            // 目的是让账号侧的采购行为保持稀疏，避免短时间连续下单。代价是刚买过香皂后喂食要等到
+            // 冷却结束，所以喂食触发点必须自己控制退避节奏，不能每轮都撞这个墙。
             if (saved.lastAttemptMillis > 0L && now - saved.lastAttemptMillis < COOLDOWN_MILLIS) {
                 return@synchronized null to "采购冷却中，至少间隔 15 分钟"
             }

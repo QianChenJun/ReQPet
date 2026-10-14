@@ -578,10 +578,16 @@ class PetCareProtocolClient(
         }
     }
 
+    /**
+     * [serverConfirmedShortage] 由调用方在服务端已经明确回「食物不足」(1000210) 时置真。
+     * 此时服务端的判定比本地库存解析更权威：实测背包解析会读出「还有库存」而喂食被拒，
+     * 两边矛盾时不能再拦下采购，否则宠物就只能一直饿着等人工点。
+     */
     fun buyFood(
         petId: String,
         count: Long = 5L,
         itemType: String = "9990032",
+        serverConfirmedShortage: Boolean = false,
         callback: (code: Int, rawData: ByteArray?, errorMsg: String?) -> Unit
     ) {
         if (count !in 1L..PurchaseGuard.MAX_PER_PURCHASE.toLong() || purchaseGuard == null ||
@@ -591,11 +597,14 @@ class PetCareProtocolClient(
             return
         }
         fetchFoodInventory { inventoryCode, _, _, items ->
-            if (inventoryCode != 0 || items.any { it.balance < 0 } ||
-                (items.firstOrNull { it.itemId == itemType }?.balance ?: 0) != 0
-            ) {
+            val localBalance = items.firstOrNull { it.itemId == itemType }?.balance ?: 0
+            val stockContradictsServer = !serverConfirmedShortage && localBalance != 0
+            if (inventoryCode != 0 || items.any { it.balance < 0 } || stockContradictsServer) {
                 callback(PurchaseGuard.BLOCKED_CODE, null, "库存未确认缺货，暂停补购")
                 return@fetchFoodInventory
+            }
+            if (serverConfirmedShortage && localBalance != 0) {
+                EngineLog.w(TAG, "服务端已判定食物不足(code=1000210)，本地库存读数($localBalance)不可信，仍执行采购")
             }
             val (reservation, reason) = purchaseGuard.reserveForPet(petId, "food:$itemType", count.toInt(), 0)
             if (reservation == null) {
