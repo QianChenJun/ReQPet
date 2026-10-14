@@ -9,6 +9,7 @@ import io.github.reqpet.engine.state.AccountSessionStore
 import io.github.reqpet.engine.task.*
 import io.github.reqpet.engine.utils.PetPureCalculations
 import io.github.reqpet.protocol.QQPetDirectBridge
+import io.github.reqpet.protocol.client.PetCareProtocolClient
 import io.github.reqpet.ui.PreferencesHelper
 import io.github.reqpet.ui.util.UiDescUtils
 import kotlinx.coroutines.*
@@ -52,6 +53,35 @@ class PetAdventureEngine(@Volatile private var bridge: QQPetDirectBridge) {
         /** 学园课程 story 形如 6100_<uuid>，与 PetStudyTask.startSchoolAwait 的 page=6100 对应。 */
         private const val STUDY_STORY_PREFIX = "6100_"
 private const val PREFS_NAME = "qqpet_inproc_prefs"
+
+        /**
+         * 探险被服务端拒绝后的冷却截止时刻。0x975e 回 135051 表示服务端不接受这次派遣，
+         * 实测会自愈（10-13 那次持续约 1.5 小时后恢复），但此前每轮都拿同一个错误重试；
+         * 冷却期内只跑学习与打工，把探险的拒绝包省下来。
+         */
+        @Volatile
+        var adventureRefusedUntilMillis: Long = 0L
+
+        const val ADVENTURE_REFUSED_CODE = 135051
+        const val ADVENTURE_REFUSED_COOLDOWN_MS = 30 * 60 * 1000L
+
+        /** 只对 135051 冷却，其它错误（网络抖动、超时）不占用冷却窗口。 */
+        fun markAdventureRefused(code: Int): Boolean {
+            if (code != ADVENTURE_REFUSED_CODE) return false
+            val until = System.currentTimeMillis() + ADVENTURE_REFUSED_COOLDOWN_MS
+            if (until <= adventureRefusedUntilMillis) return false
+            adventureRefusedUntilMillis = until
+            return true
+        }
+
+        fun adventureCooldownRemainingSeconds(): Long {
+            val left = adventureRefusedUntilMillis - System.currentTimeMillis()
+            return if (left <= 0L) 0L else (left + 999L) / 1000L
+        }
+
+        /** 每日礼包领取状态，按账号记 "日期|已试次数|done"；每天最多试 3 次。 */
+        private const val GIFT_CLAIM_STATE_KEY = "key_gift_claim_state"
+        private const val GIFT_CLAIM_MAX_ATTEMPTS = 3
 
         /** 已消耗学习道具的 story，保证一条课程只用一个。 */
         @Volatile
@@ -236,6 +266,9 @@ private const val PREFS_NAME = "qqpet_inproc_prefs"
 
         @Volatile
         var prefAutoUseStudyItem = false
+
+        @Volatile
+        var prefAutoClaimGift = false
 
         @Volatile
         var prefCustomWorkType = 0
@@ -537,6 +570,7 @@ private const val PREFS_NAME = "qqpet_inproc_prefs"
             }
             val petId = ensurePetIdLocked(context)
                 ?: return 30_000L.also { sleepMs = it; reason = "pet_unavailable" }
+            maybeClaimDailyGift(context)
             sendLog("[主循环] 正在查询外出状态")
             val story = queryStoryStatusAwait(petId)
             RuntimeDiagnostics.event(
@@ -606,7 +640,9 @@ private const val PREFS_NAME = "qqpet_inproc_prefs"
                 val outingSleep = if (hiredDecision != null && hiredDecision.nextSleepMillis > 0L) {
                     hiredDecision.nextSleepMillis
                 } else {
-                    StealthScheduler.calculateTaskSleepSeconds(rem, prefHumanLikeSleep, enableSlices = false) * 1000L
+                    // 长任务按 3~5 分钟切片中途复查：服务器可能提前召回或中途降效，
+                    // 睡到本地推测的到期点会错过这些变化。每片至少间隔 180 秒，不违反 0x975a 限流。
+                    StealthScheduler.calculateTaskSleepSeconds(rem, prefHumanLikeSleep, enableSlices = true) * 1000L
                 }
                 val waitMs = sleepForMaintenance(context, outingSleep)
                 val waitNote =
@@ -638,6 +674,35 @@ private const val PREFS_NAME = "qqpet_inproc_prefs"
                 "task_end_ms" to currentTaskEndTimeMillis
             )
             currentCycleId = 0L
+        }
+    }
+
+    /**
+     * 每日礼包（SVIP 礼包）自动领取。礼包每天只放开一次，且是否可领由服务端判定：
+     * 本地只保证「当天试过就不再试」，失败最多试 3 次，避免整点空转刷同一个拒绝。
+     * 请求按抓包复刻（0x9bb1_0 入口上报 + 0x994c_1 kind=4），成败只看服务端 code。
+     */
+    private suspend fun maybeClaimDailyGift(context: Context) {
+        if (!prefAutoClaimGift) return
+        val today = java.time.LocalDate.now().toString()
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val stateKey = "${GIFT_CLAIM_STATE_KEY}_${currentActiveUin ?: "anon"}"
+        val recorded = prefs.getString(stateKey, null)?.split("|")
+        val sameDay = recorded?.getOrNull(0) == today
+        val attempts = if (sameDay) recorded?.getOrNull(1)?.toIntOrNull() ?: 0 else 0
+        if (sameDay && recorded?.getOrNull(2) == "done") return
+        if (attempts >= GIFT_CLAIM_MAX_ATTEMPTS) return
+        prefs.edit().putString(stateKey, "$today|${attempts + 1}|pending").apply()
+        sendLog("[每日礼包] 尝试自动领取 (kind=${PetCareProtocolClient.GIFT_KIND_DAILY}, 第 ${attempts + 1} 次)")
+        val (code, err) = PetCareTask.claimDailyGiftAwait(bridge)
+        RuntimeDiagnostics.event(
+            "gift_claim", "code" to code, "attempt" to (attempts + 1), "err" to (err ?: "-")
+        )
+        if (code == 0) {
+            prefs.edit().putString(stateKey, "$today|${attempts + 1}|done").apply()
+            sendLog("[每日礼包] 自动领取已发出，服务端 code=0")
+        } else {
+            sendLog(EngineLog.Level.WARN, "[每日礼包] 领取未成功 (code=$code, err=${err ?: "无"})，稍后再试")
         }
     }
 

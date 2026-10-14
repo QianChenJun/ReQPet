@@ -56,6 +56,12 @@ internal object PetAdventureDispatch {
         // 服务端拒绝时的 errorMsg 是判据（例如次数上限），只记 code 会丢掉它。
         val detail = if (errorMsg.isNullOrBlank()) "" else ", err=$errorMsg"
         PetAdventureEngine.sendLog(EngineLog.Level.WARN, "[探险回包] 森林探险启程未生效 (code=$code$detail)")
+        if (PetAdventureEngine.markAdventureRefused(code)) {
+            PetAdventureEngine.sendLog(
+                EngineLog.Level.WARN,
+                "[探险冷却] code=$code 表示服务端本轮不接受探险派遣，暂停探险 ${PetAdventureEngine.ADVENTURE_REFUSED_COOLDOWN_MS / 60000} 分钟，期间学习与打工照常"
+            )
+        }
         probeAdventureCatalog(bridge, petId)
         return false
     }

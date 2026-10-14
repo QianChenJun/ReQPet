@@ -34,9 +34,20 @@ object PetCycleDispatcher {
         petId: String
     ): Long {
         val available = mutableListOf<String>()
+        val adventureCooldownSeconds = PetAdventureEngine.adventureCooldownRemainingSeconds()
         if (PetAdventureEngine.enableStudy) available.add("study")
         if (PetAdventureEngine.enableWork) available.add("work")
-        if (PetAdventureEngine.enableAdventure) available.add("adventure")
+        if (PetAdventureEngine.enableAdventure && adventureCooldownSeconds <= 0L) available.add("adventure")
+        if (available.isEmpty() && PetAdventureEngine.enableAdventure) {
+            PetAdventureEngine.sendLog(
+                "[探险冷却] 只剩探险可用，虽然还在 ${adventureCooldownSeconds / 60} 分钟冷却内，仍尝试一次"
+            )
+            available.add("adventure")
+        } else if (adventureCooldownSeconds > 0L && PetAdventureEngine.enableAdventure) {
+            PetAdventureEngine.sendLog(
+                "[探险冷却] 距 135051 拒绝还剩约 ${adventureCooldownSeconds / 60} 分钟，本轮只派学习与打工"
+            )
+        }
         if (available.isEmpty()) {
             RuntimeDiagnostics.event(
                 "dispatch_result", "cycle" to PetAdventureEngine.currentCycleId,
@@ -64,7 +75,8 @@ object PetCycleDispatcher {
                 "dispatch_result", "cycle" to PetAdventureEngine.currentCycleId,
                 "transaction" to PetAdventureEngine.currentTransactionId,
                 "outcome" to "started", "sleep_ms" to 5_000L,
-                "candidates" to available.joinToString("/"), "cursor" to startCursor
+                "candidates" to available.joinToString("/"), "cursor" to startCursor,
+                "adventure_cooldown_s" to adventureCooldownSeconds
             )
             return 5000L
         }
@@ -76,6 +88,7 @@ object PetCycleDispatcher {
             "transaction" to PetAdventureEngine.currentTransactionId,
             "outcome" to "failed", "attempts" to attempts,
             "candidates" to available.joinToString("/"), "cursor" to startCursor,
+            "adventure_cooldown_s" to adventureCooldownSeconds,
             "consecutive_failures" to consecutiveFailureCount, "sleep_ms" to backoff
         )
         PetAdventureEngine.sendLog(
