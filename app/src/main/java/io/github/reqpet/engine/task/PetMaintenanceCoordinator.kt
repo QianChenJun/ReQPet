@@ -166,6 +166,7 @@ object PetMaintenanceCoordinator {
                     return
                 }
             }
+            var careFailed = false
             if (attrs.energy < PetAdventureEngine.prefCareEnergyThreshold) {
                 val result = PetCareTask.feedWithAutoBuyAwait(
                     context,
@@ -175,7 +176,7 @@ object PetMaintenanceCoordinator {
                 ) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
                 if (result.first != 0) {
                     PetAdventureEngine.sendLog("[自理] 进食暂停: ${result.second ?: result.first}，进入退避")
-                    return
+                    careFailed = true
                 }
             }
             if (attrs.clean < PetAdventureEngine.prefCareCleanThreshold) {
@@ -187,10 +188,10 @@ object PetMaintenanceCoordinator {
                 ) { level, msg -> PetAdventureEngine.sendLog(level, msg) }
                 if (result.code != 0) {
                     PetAdventureEngine.sendLog("[自理] 洗护暂停: ${result.errorMsg ?: result.code}，进入退避")
-                    return
+                    careFailed = true
                 }
             }
-            success = true
+            success = !careFailed
         } finally {
             if (generation == PetAdventureEngine.sessionGeneration) {
                 PetAdventureEngine.lastCareTimeMillis = System.currentTimeMillis()
