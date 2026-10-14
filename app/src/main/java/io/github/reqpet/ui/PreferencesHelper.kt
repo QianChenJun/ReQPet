@@ -20,6 +20,7 @@ object PreferencesHelper {
     const val KEY_COURSE_SUBJECT = "key_custom_course_subject"
     const val KEY_COURSE_DURATION = "key_custom_course_duration"
     const val KEY_AUTO_USE_STUDY_ITEM = "key_auto_use_study_item"
+    const val KEY_AUTO_CLAIM_GIFT = "key_auto_claim_gift"
     const val KEY_ITEM_USED_STORY = "key_item_used_story"
     const val KEY_WORK_TYPE = "key_custom_work_type"
     const val KEY_WORK_DURATION = "key_custom_work_duration"

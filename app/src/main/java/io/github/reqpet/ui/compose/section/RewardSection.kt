@@ -29,6 +29,19 @@ fun RewardSection(state: SettingsState) {
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+        SectionHeader("每日礼包")
+        SettingsGroup {
+            item {
+                ToggleRow(
+                    title = "自动领取礼包",
+                    checked = state.bool(PreferencesHelper.KEY_AUTO_CLAIM_GIFT, false),
+                    onCheckedChange = { state.setBool(PreferencesHelper.KEY_AUTO_CLAIM_GIFT, it) },
+                    subtitle = "每天首次巡检时按抓包复刻的顺序发一次领取（0x9bb1_0 + 0x994c_1）。礼包每天只能领一次，当天最多尝试 3 次，结果写入诊断日志"
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
         RewardActions(state = state)
     }
 }

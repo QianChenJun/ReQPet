@@ -42,6 +42,7 @@ internal object EngineConfigLoader {
             PetAdventureEngine.prefCustomCourseSubject = p.getInt(PreferencesHelper.KEY_COURSE_SUBJECT, 0)
             PetAdventureEngine.prefCustomCourseDuration = p.getInt(PreferencesHelper.KEY_COURSE_DURATION, 0)
             PetAdventureEngine.prefAutoUseStudyItem = p.getBoolean(PreferencesHelper.KEY_AUTO_USE_STUDY_ITEM, false)
+            PetAdventureEngine.prefAutoClaimGift = p.getBoolean(PreferencesHelper.KEY_AUTO_CLAIM_GIFT, false)
             PetAdventureEngine.prefCustomWorkType = p.getInt(PreferencesHelper.KEY_WORK_TYPE, 0)
             PetAdventureEngine.prefCustomWorkDuration = p.getInt(PreferencesHelper.KEY_WORK_DURATION, 0)
             PetAdventureEngine.prefCareEnergyThreshold = p.getInt(PreferencesHelper.KEY_CARE_ENERGY_THRESHOLD, 60)
@@ -85,6 +86,7 @@ internal object EngineConfigLoader {
         "学习:${onOff(PetAdventureEngine.enableStudy)} 打工:${onOff(PetAdventureEngine.enableWork)} " +
                 "冒险:${onOff(PetAdventureEngine.enableAdventure)} 结算:${onOff(PetAdventureEngine.enableSettle)} " +
                 "学习道具:${onOff(PetAdventureEngine.prefAutoUseStudyItem)} " +
+                "礼包:${onOff(PetAdventureEngine.prefAutoClaimGift)} " +
                 "疲惫转探险:${onOff(PetAdventureEngine.enableFatigueToAdventure)}"
 
     fun logSummary(context: Context) {
@@ -150,6 +152,7 @@ internal object EngineConfigLoader {
                     "好友体力≤$prefFriendCareEnergyThreshold 好友清洁≤$prefFriendCareCleanThreshold " +
                     "召回:${if (prefHiredRecallProgress > 0) "${prefHiredRecallProgress}%" else "关"} " +
                     "学习道具:${onOff(autoUseStudyItem)} " +
+                    "礼包:${onOff(PetAdventureEngine.prefAutoClaimGift)} " +
                     "拟人:${onOff(prefHumanLikeSleep)} 夜间静默:${onOff(prefNightSleepMode)} 熄屏静默:${
                         onOff(
                             prefScreenOffSilent

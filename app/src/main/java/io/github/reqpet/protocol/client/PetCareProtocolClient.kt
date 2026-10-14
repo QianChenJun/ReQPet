@@ -31,6 +31,9 @@ class PetCareProtocolClient(
         private const val TAG = "PetCareProtocolClient"
         private const val DEFAULT_FOOD_ID = 9990032L
         private const val INVENTORY_DUMP_LIMIT = 512
+
+        /** 礼包类型：抓包实测 type=4 与 0x9bb1_0 的 P1000 入口成对出现（0 点与两次手动领取）。 */
+        const val GIFT_KIND_DAILY = 4
         private val FEED_PB_CANDIDATES = listOf("p54.b", "t64.b", "zh5.b")
         internal fun validateFeedPbSchema(candidateCls: Class<*>, nanoCls: Class<*>): Boolean {
             if (!nanoCls.isAssignableFrom(candidateCls)) return false
@@ -441,6 +444,43 @@ class PetCareProtocolClient(
                 EngineLog.w("PetCareClient", "[道具库存] 查询失败: code=$code, err=${err ?: "无"}")
             }
             callback(code, data)
+        }
+    }
+
+    /**
+     * 每日/SVIP 礼包领取，按抓包复刻 QQ 自身的两步流程：
+     * 先发 0x9bb1_0（活动入口上报，含商品号 P1000），再发 0x994c_1，正文 f1{f1=4, f2=客户端毫秒时间戳}。
+     * 两条都是 fire-and-forget（服务端成功时回 code=0 且空正文），所以只能以 code 判定成败。
+     */
+    fun claimDailyGift(callback: (code: Int, errorMsg: String?) -> Unit) {
+        val claimTime = System.currentTimeMillis()
+        reportDailyGiftEntry(claimTime)
+        val bodyBytes = ProtoWire.message()
+            .writeBytes(
+                1,
+                ProtoWire.message()
+                    .writeVarint(1, GIFT_KIND_DAILY.toLong())
+                    .writeVarint(2, claimTime)
+                    .toByteArray()
+            )
+            .toByteArray()
+        channel.sendOidb("OidbSvcTrpcTcp.0x994c_1", 39244, 1, bodyBytes) { code, data, err ->
+            EngineLog.i(TAG, "claimDailyGift 回包: code=$code, len=${data?.size ?: 0}, kind=$GIFT_KIND_DAILY")
+            callback(code, err)
+        }
+    }
+
+    private fun reportDailyGiftEntry(timestampMillis: Long) {
+        val traceId = java.util.UUID.randomUUID().toString().replace("-", "")
+        val bodyBytes = ProtoWire.message()
+            .writeString(1, "101")
+            .writeString(2, "P1000")
+            .writeString(3, "P1000")
+            .writeVarint(4, timestampMillis)
+            .writeString(5, "${traceId}_${1 + (timestampMillis % 9).toInt()}")
+            .toByteArray()
+        channel.sendOidb("OidbSvcTrpcTcp.0x9bb1_0", 39857, 0, bodyBytes) { code, data, err ->
+            EngineLog.i(TAG, "claimDailyGift 入口上报回包: code=$code, len=${data?.size ?: 0}, err=${err ?: "-"}")
         }
     }
 

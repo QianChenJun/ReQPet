@@ -28,7 +28,9 @@ internal object ProtocolProbe {
     private const val HEX = "0123456789abcdef"
 
     /** 只盯与调度决策直接相关的命令，避免高频只读轮询灌满磁盘。 */
-    private val watched = listOf("0x975e", "0x975f", "0x9760", "0x9ab2", "0x9949", "0x994b", "0x975a")
+    private val watched = listOf(
+        "0x975e", "0x975f", "0x9760", "0x9ab2", "0x9949", "0x994b", "0x975a", "0x994c", "0x9bb1"
+    )
 
     private val stampFormat = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss.SSS")
 
