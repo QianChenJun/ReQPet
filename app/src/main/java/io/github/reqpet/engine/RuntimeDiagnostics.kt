@@ -47,6 +47,7 @@ object RuntimeDiagnostics {
         } catch (_: Throwable) {
             // Diagnostics must never change host behavior, including before bind.
         }
+        TaskLedger.record(name, fields)
     }
 
     fun error(name: String, error: Throwable, vararg fields: Pair<String, Any?>) {
@@ -92,6 +93,7 @@ object RuntimeDiagnostics {
                 File(appContext.filesDir, "qpet-diagnostics")
             }
             resolvedDirectory = directory
+            TaskLedger.directory = directory
             val thread = Thread({
                 try {
                     EngineTextLog.bind(directory)
