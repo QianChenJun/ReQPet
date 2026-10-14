@@ -4,6 +4,7 @@ import io.github.reqpet.engine.RuntimeDiagnostics
 import io.github.reqpet.engine.TaskLogger
 import io.github.reqpet.engine.model.StudyDispatchParam
 import io.github.reqpet.engine.model.StudyDispatchResult
+import io.github.reqpet.engine.utils.CatalogPicker
 import io.github.reqpet.engine.utils.PetPureCalculations
 import io.github.reqpet.protocol.QQPetDirectBridge
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -63,23 +64,33 @@ object PetStudyTask {
             return StudyDispatchResult(code = evtCode, errorMsg = "课程查询失败")
         }
         onLog("[课程拉取] 服务端返回 ${dynamicEvents.size} 门课程")
-        val targetCourse = filterAndSelectCourse(dynamicEvents, param)
+        val (targetCourse, pickReason) = selectCourse(dynamicEvents, param)
+        onLog("[选课比价] $pickReason")
         if (targetCourse == null) {
-            onLog.warn("[学园调度] 阶段 $targetStage 没有与所设科目或时长匹配的课程，本次不报名")
-            return StudyDispatchResult(code = -3, errorMsg = "没有与所设科目或时长匹配的课程")
+            val fatigueTip = dynamicEvents.firstOrNull { it.isFatigued }?.eventTips
+            RuntimeDiagnostics.event(
+                "study_course",
+                "fatigued" to true,
+                "fatigue_tip" to !fatigueTip.isNullOrEmpty(),
+                "sub_event" to 0,
+                "cost" to "",
+                "avoid" to param.enableFatigueToAdventure
+            )
+            if (param.enableFatigueToAdventure) {
+                onLog("[疲惫避让] 学园可做档位都已降效，按设置转入森林探险")
+                return StudyDispatchResult(code = -2, isFatigued = true, fatigueTip = fatigueTip)
+            }
+            onLog.warn("[学园调度] 阶段 $targetStage 没有未降效的可做档位，本次不报名")
+            return StudyDispatchResult(code = -3, errorMsg = "没有未降效的可做档位")
         }
-        // 记录选中课程的疲劳判定，供事后回答「这轮为什么去上课 / 为什么避让」。
         RuntimeDiagnostics.event(
             "study_course",
             "fatigued" to targetCourse.isFatigued,
             "fatigue_tip" to !targetCourse.eventTips.isNullOrEmpty(),
             "sub_event" to targetCourse.subEventType,
             "cost" to targetCourse.costTime,
-            "avoid" to (param.enableFatigueToAdventure && targetCourse.isFatigued)
+            "avoid" to false
         )
-        if (param.enableFatigueToAdventure && targetCourse.isFatigued) {
-            return StudyDispatchResult(code = -2, isFatigued = true, fatigueTip = targetCourse.eventTips)
-        }
         onLog("[学园报名] 锁定课程: ${targetCourse.eventName} (时长:${targetCourse.costTime})，发起启程...")
         val (code, storyId, errMsg) = startSchoolAwait(
             bridge,
@@ -115,23 +126,40 @@ object PetStudyTask {
         return if (details.code == 0 && details.currentStage > 0) details.currentStage else 0
     }
 
-    private fun filterAndSelectCourse(
+    /**
+     * 选课：先按用户设定的科目与时长档收敛，再在未降效的档位里比每小时收益。
+     * 收敛结果全被降效时逐级放宽（先放宽时长、再放宽科目），避免当日额度用满后整天只去冒险；
+     * 放宽后仍没有未降效档位时才交给调用方转冒险。
+     */
+    private fun selectCourse(
         events: List<QQPetDirectBridge.SelectEvent>,
         param: StudyDispatchParam
-    ): QQPetDirectBridge.SelectEvent? {
+    ): Pair<QQPetDirectBridge.SelectEvent?, String> {
         val available = events.filter { it.canDo }.ifEmpty { events }
-        if (available.isEmpty()) return null
+        if (available.isEmpty()) return null to "目录为空"
         val durationFiltered = when (param.customCourseDuration) {
             1 -> available.filter { it.costTime.contains("分") && !it.costTime.contains("90") && !it.costTime.contains("135") }
             2 -> available.filter { it.costTime.contains("小时") || it.costTime.contains("90") || it.costTime.contains("135") }
             else -> available
         }
-        if (durationFiltered.isEmpty()) return null
-        return when (param.customCourseSubject) {
-            1 -> durationFiltered.find { it.reward.contains("智力") }
-            2 -> durationFiltered.find { it.reward.contains("力量") }
-            3 -> durationFiltered.find { it.reward.contains("魅力") }
-            else -> durationFiltered[param.studyAttributeCursor % durationFiltered.size]
+        fun bySubject(source: List<QQPetDirectBridge.SelectEvent>) = when (param.customCourseSubject) {
+            1 -> source.filter { it.reward.contains("智力") }
+            2 -> source.filter { it.reward.contains("力量") }
+            3 -> source.filter { it.reward.contains("魅力") }
+            else -> source
         }
+        val stages = listOf(
+            "科目+时长" to bySubject(durationFiltered).ifEmpty { durationFiltered },
+            "放宽时长" to bySubject(available),
+            "放宽科目" to durationFiltered.ifEmpty { available }
+        )
+        for ((stageName, candidates) in stages) {
+            val ranking = CatalogPicker.describeRanking(candidates)
+            val picked = CatalogPicker.pickBestRate(candidates, param.studyAttributeCursor)
+            if (picked != null) {
+                return picked to "$stageName 选中 ${picked.eventName}｜$ranking"
+            }
+        }
+        return null to "可做档位全部降效｜${CatalogPicker.describeRanking(available)}"
     }
 }
