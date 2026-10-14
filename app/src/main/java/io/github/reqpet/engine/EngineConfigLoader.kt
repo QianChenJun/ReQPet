@@ -21,9 +21,18 @@ internal object EngineConfigLoader {
             val automaticTasks = PetAdventureEngine.masterEnabled
             PetAdventureEngine.enableStudy = p.getBoolean("key_study", automaticTasks)
             PetAdventureEngine.enableWork = p.getBoolean("key_work", automaticTasks)
-            val rawOneClickCare = p.getBoolean(PreferencesHelper.KEY_ONE_CLICK_CARE, false)
+            var rawOneClickCare = p.getBoolean(PreferencesHelper.KEY_ONE_CLICK_CARE, automaticTasks)
+            val rawLegacyCare = p.getBoolean(PreferencesHelper.KEY_CARE, false)
+            if (automaticTasks && p.getInt(PreferencesHelper.KEY_CARE_MODE_VERSION, 0) < 1) {
+                p.edit()
+                    .putBoolean(PreferencesHelper.KEY_ONE_CLICK_CARE, true)
+                    .putBoolean(PreferencesHelper.KEY_CARE, false)
+                    .putInt(PreferencesHelper.KEY_CARE_MODE_VERSION, 1)
+                    .apply()
+                rawOneClickCare = true
+            }
             PetAdventureEngine.enableOneClickCare = rawOneClickCare
-            PetAdventureEngine.enableCare = !rawOneClickCare && p.getBoolean("key_care", false)
+            PetAdventureEngine.enableCare = !rawOneClickCare && rawLegacyCare
             PetAdventureEngine.enableAdventure = p.getBoolean("key_adventure", automaticTasks)
             val hasAnyTask =
                 PetAdventureEngine.enableStudy || PetAdventureEngine.enableWork || PetAdventureEngine.enableAdventure
