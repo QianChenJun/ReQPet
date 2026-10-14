@@ -11,12 +11,11 @@ import java.util.Locale
 import java.util.concurrent.ArrayBlockingQueue
 
 /**
- * OIDB 信令嗅探：hook 宠物域发包代理的方法，把 QQ 宠物页面（含手Q UI 发起的 SVIP 礼包领取等）
- * 发起的所有 OIDB 请求与回包记录到 QPetTrace 与 traceFile，供协议逆向分析。
+ * OIDB 信令嗅探：hook 宠物域发包代理的方法，把 QQ 宠物页面与模块自身发起的所有 OIDB
+ * 请求、回包和完整包体记录到快速 trace 与全量审计文件，供协议逆向分析。
  * 仅在 key_debug_log 开启时安装，只读不拦截。
  *
- * 落盘是必要的：logcat 环形缓冲分钟级就会冲掉早先记录，而礼包领取这类每天只有一次的信令
- * 必须隔夜可查。
+ * 快速 trace 会受容量限制；全量审计按周清理，避免低频新功能被高频状态包覆盖。
  */
 object OidbSniffer {
 
@@ -25,6 +24,7 @@ object OidbSniffer {
     private const val MAX_BODY_DUMP = 4096
     private const val MAX_TRACE_BYTES = 2L * 1024 * 1024
     private const val QUEUE_CAPACITY = 4096
+    private const val AUDIT_WEEK_MS = 7L * 24 * 60 * 60 * 1000
 
     @Volatile
     var isEnabled: Boolean = false
@@ -33,7 +33,14 @@ object OidbSniffer {
     @Volatile
     var traceFile: File? = null
 
+    /** 全量 OIDB 审计文件，不与高频 OIDB 快速追踪共用容量。 */
+    @Volatile
+    var auditFile: File? = null
+
     private val queue = ArrayBlockingQueue<String>(QUEUE_CAPACITY)
+    private val auditQueue = ArrayBlockingQueue<String>(QUEUE_CAPACITY)
+    private val auditWriterStarted = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val auditLock = Any()
 
     private fun trace(line: String) {
         Log.i(TRACE_TAG, line)
@@ -73,6 +80,7 @@ object OidbSniffer {
     fun recordModuleSend(commandName: String, command: Int, subCommand: Int, request: ByteArray) {
         if (!isEnabled) return
         try {
+            recordAudit("module", "request", commandName, command, subCommand, null, request)
             trace(
                 "[oidb-own] cmd=$commandName ($command/$subCommand) " +
                     "len=${request.size} body=${bytesToHex(request.take(MAX_BODY_DUMP / 2))}"
@@ -93,6 +101,7 @@ object OidbSniffer {
         if (!isEnabled) return
         try {
             val hex = data?.let { bytesToHex(it.take(MAX_BODY_DUMP / 2)) } ?: ""
+            recordAudit("module", "response", commandName, command, subCommand, code, data)
             trace(
                 "[oidb-own-resp] cmd=$commandName ($command/$subCommand) code=$code " +
                     "len=${data?.size ?: 0} body=$hex"
@@ -127,6 +136,7 @@ object OidbSniffer {
                     try {
                         val body = chain.getArg(0) as? ByteArray
                         val hex = body?.let { bytesToHex(it.take(MAX_BODY_DUMP / 2)) } ?: ""
+                        recordAudit("host", "request", cmd, cmdInt, subInt, null, body)
                         trace("[oidb] cmd=$cmd ($cmdInt/$subInt) len=${body?.size ?: 0} body=$hex")
                     } catch (t: Throwable) {
                         if (t is kotlinx.coroutines.CancellationException) throw t
@@ -151,6 +161,7 @@ object OidbSniffer {
                                     val code = (args[0] as? Number)?.toInt() ?: -1
                                     val data = args.getOrNull(1) as? ByteArray
                                     val hex = data?.let { bytesToHex(it.take(MAX_BODY_DUMP / 2)) } ?: ""
+                                    recordAudit("host", "response", cmd, cmdInt, subInt, code, data)
                                     trace("[oidb-resp] cmd=$cmd ($cmdInt/$subInt) code=$code len=${data?.size ?: 0} body=$hex")
                                 } catch (t: Throwable) {
                                     if (t is kotlinx.coroutines.CancellationException) throw t
@@ -182,6 +193,66 @@ object OidbSniffer {
 
     private var installed: Boolean = false
 
+    /** 全量 OIDB 审计：保留完整包体；每个 7 天桶开始时清空旧记录。 */
+    private fun recordAudit(
+        source: String,
+        direction: String,
+        commandName: String?,
+        command: Int,
+        subCommand: Int,
+        code: Int?,
+        data: ByteArray?
+    ) {
+        if (!isEnabled || commandName == null) return
+        try {
+            val stamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ", Locale.US).format(Date())
+            val body = data?.let { bytesToHex(it) } ?: ""
+            auditQueue.offer(
+                "$stamp source=$source direction=$direction cmd=$commandName " +
+                    "($command/$subCommand) code=${code ?: "-"} len=${data?.size ?: 0} body=$body\n"
+            )
+            startAuditWriter()
+        } catch (_: Throwable) {
+            // 全量审计不能改变宿主 OIDB 调用结果。
+        }
+    }
+
+    private fun startAuditWriter() {
+        if (!auditWriterStarted.compareAndSet(false, true)) return
+        Thread({
+            while (true) {
+                val line = try {
+                    auditQueue.take()
+                } catch (_: InterruptedException) {
+                    continue
+                }
+                try {
+                    val file = auditFile ?: continue
+                    val parent = file.parentFile ?: continue
+                    synchronized(auditLock) {
+                        if (parent.isDirectory || parent.mkdirs()) {
+                            val weekFile = File(parent, ".oidb_audit.week")
+                            val weekKey = (System.currentTimeMillis() / AUDIT_WEEK_MS).toString()
+                            if (weekFile.readTextOrNull() != weekKey) {
+                                file.writeText("")
+                                weekFile.writeText(weekKey)
+                            }
+                            BufferedWriter(FileWriter(file, true)).use { it.write(line) }
+                        }
+                    }
+                } catch (_: Throwable) {
+                    // 落盘失败只丢失审计记录，不影响宿主。
+                }
+            }
+        }, "qpet-oidb-audit").apply { isDaemon = true }.start()
+    }
+
+    private fun File.readTextOrNull(): String? = try {
+        if (isFile) readText().trim() else null
+    } catch (_: Throwable) {
+        null
+    }
+
     private fun bytesToHex(bytes: List<Byte>): String {
         val sb = StringBuilder(bytes.size * 2)
         for (b in bytes) {
@@ -189,5 +260,9 @@ object OidbSniffer {
             sb.append("0123456789abcdef"[b.toInt() and 0xF])
         }
         return sb.toString()
+    }
+
+    private fun bytesToHex(bytes: ByteArray): String = bytes.joinToString("") {
+        "%02x".format(Locale.US, it.toInt() and 0xff)
     }
 }

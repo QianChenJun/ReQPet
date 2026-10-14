@@ -306,6 +306,10 @@ class HookEntry : XposedModule() {
                             snifferPrefs.getBoolean(PreferencesHelper.KEY_DEBUG_LOG, false)
                         io.github.reqpet.hook.OidbSniffer.traceFile =
                             java.io.File(appContext.filesDir, "oidb_trace.log")
+                        io.github.reqpet.hook.OidbSniffer.auditFile = java.io.File(
+                            io.github.reqpet.engine.RuntimeDiagnostics.directory() ?: appContext.filesDir,
+                            "oidb_audit.log"
+                        )
                         io.github.reqpet.engine.ProtocolProbe.directory =
                             io.github.reqpet.engine.RuntimeDiagnostics.directory()
                         io.github.reqpet.protocol.channel.OidbChannel.resolvedDelegateClass?.let { cls ->
